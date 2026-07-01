@@ -1,0 +1,50 @@
+name: Go API CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  lint:
+    name: Runner / Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+
+  test-and-build:
+    name: Runner / Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run Tests
+        run: |
+          go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: Build API
+        run: |
+          go build -v -o server main.go
