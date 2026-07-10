@@ -1,0 +1,5 @@
+.env
+vault-api
+server
+*.test
+coverage.out
