@@ -14,6 +14,12 @@ export PORT
 # específica de Railway.
 RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
 : "${RESOLVER:=127.0.0.11}"
+# nginx exige corchetes para direcciones IPv6 en la directiva resolver
+# (si no, interpreta los ":" como separador de puerto y falla al arrancar
+# con "invalid port in resolver").
+case "$RESOLVER" in
+  *:*) RESOLVER="[$RESOLVER]" ;;
+esac
 export RESOLVER
 
 envsubst '${PORT} ${RESOLVER}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
