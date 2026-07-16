@@ -3,3 +3,4 @@ vault-api
 server
 *.test
 coverage.out
+cookies.txt
