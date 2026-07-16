@@ -6,16 +6,18 @@ import (
 	"net/http"
 
 	"vault/src/core/httpresponse"
+	"vault/src/core/security"
 	"vault/src/features/users/application"
 	"vault/src/features/users/domain/dto/request"
 )
 
 type CreateUserController struct {
-	useCase *application.CreateUserUseCase
+	useCase      *application.CreateUserUseCase
+	cookieSecure bool
 }
 
-func NewCreateUserController(useCase *application.CreateUserUseCase) *CreateUserController {
-	return &CreateUserController{useCase: useCase}
+func NewCreateUserController(useCase *application.CreateUserUseCase, cookieSecure bool) *CreateUserController {
+	return &CreateUserController{useCase: useCase, cookieSecure: cookieSecure}
 }
 
 func (c *CreateUserController) Handle(w http.ResponseWriter, r *http.Request) {
@@ -35,5 +37,8 @@ func (c *CreateUserController) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if created.Token != "" {
+		security.SetAuthCookie(w, created.Token, c.cookieSecure)
+	}
 	httpresponse.WriteJSON(w, http.StatusCreated, created)
 }

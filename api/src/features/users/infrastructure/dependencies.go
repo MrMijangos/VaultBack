@@ -9,10 +9,10 @@ import (
 	"vault/src/features/users/infrastructure/controllers"
 )
 
-func BuildCreateUserController(pool *pgxpool.Pool) *controllers.CreateUserController {
+func BuildCreateUserController(pool *pgxpool.Pool, jwtSecret string, cookieSecure bool) *controllers.CreateUserController {
 	repo := adapters.NewPostgreSQLUserRepository(pool)
-	useCase := application.NewCreateUserUseCase(repo)
-	return controllers.NewCreateUserController(useCase)
+	useCase := application.NewCreateUserUseCase(repo, jwtSecret)
+	return controllers.NewCreateUserController(useCase, cookieSecure)
 }
 
 func BuildGetAllUsersController(pool *pgxpool.Pool) *controllers.GetAllUsersController {

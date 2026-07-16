@@ -13,15 +13,18 @@ type PostPhotoResponse struct {
 }
 
 type PostResponse struct {
-	ID             string              `json:"id"`
-	UserID         string              `json:"user_id"`
-	AssetID        *string             `json:"asset_id"`
-	Content        string              `json:"content"`
-	SentimentLabel string              `json:"sentiment_label"`
-	IsVisible      bool                `json:"is_visible"`
-	LikesCount     int                 `json:"likes_count"`
-	CreatedAt      time.Time           `json:"created_at"`
-	Photos         []PostPhotoResponse `json:"photos"`
+	ID              string              `json:"id"`
+	UserID          string              `json:"user_id"`
+	AssetID         *string             `json:"asset_id"`
+	Content         string              `json:"content"`
+	SentimentLabel  string              `json:"sentiment_label"`
+	IsVisible       bool                `json:"is_visible"`
+	LikesCount      int                 `json:"likes_count"`
+	CreatedAt       time.Time           `json:"created_at"`
+	Photos          []PostPhotoResponse `json:"photos"`
+	AuthorName      string              `json:"author_name"`
+	AuthorAvatarURL string              `json:"author_avatar_url"`
+	CommentsCount   int                 `json:"comments_count"`
 }
 
 func FromEntity(p entities.Post, photos []entities.PostPhoto) PostResponse {
@@ -31,15 +34,18 @@ func FromEntity(p entities.Post, photos []entities.PostPhoto) PostResponse {
 	}
 
 	return PostResponse{
-		ID:             p.ID,
-		UserID:         p.UserID,
-		AssetID:        p.AssetID,
-		Content:        p.Content,
-		SentimentLabel: p.SentimentLabel,
-		IsVisible:      p.IsVisible,
-		LikesCount:     p.LikesCount,
-		CreatedAt:      p.CreatedAt,
-		Photos:         photoResponses,
+		ID:              p.ID,
+		UserID:          p.UserID,
+		AssetID:         p.AssetID,
+		Content:         p.Content,
+		SentimentLabel:  p.SentimentLabel,
+		IsVisible:       p.IsVisible,
+		LikesCount:      p.LikesCount,
+		CreatedAt:       p.CreatedAt,
+		Photos:          photoResponses,
+		AuthorName:      p.AuthorName,
+		AuthorAvatarURL: p.AuthorAvatarURL,
+		CommentsCount:   p.CommentsCount,
 	}
 }
 

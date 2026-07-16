@@ -15,4 +15,6 @@ type Config struct {
 	CloudinaryCloudName string
 	CloudinaryAPIKey    string
 	CloudinaryAPISecret string
+	RabbitMQURL         string
+	NLPServiceURL       string
 }

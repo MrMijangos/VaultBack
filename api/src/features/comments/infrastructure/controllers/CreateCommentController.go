@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
 
 	"vault/src/core/httpresponse"
+	"vault/src/core/moderation"
 	"vault/src/core/security"
 	"vault/src/features/comments/application"
 	"vault/src/features/comments/domain/dto/request"
@@ -41,7 +43,14 @@ func (c *CreateCommentController) Handle(w http.ResponseWriter, r *http.Request)
 
 	created, err := c.useCase.Execute(r.Context(), postID, claims.UserID, req)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, err.Error())
+		switch {
+		case errors.Is(err, moderation.ErrToxicContent):
+			httpresponse.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		case errors.Is(err, moderation.ErrUnavailable):
+			httpresponse.WriteError(w, http.StatusServiceUnavailable, err.Error())
+		default:
+			httpresponse.WriteError(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 

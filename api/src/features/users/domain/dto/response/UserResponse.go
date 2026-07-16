@@ -8,6 +8,7 @@ type UserResponse struct {
 	Email     string `json:"email"`
 	AvatarURL string `json:"avatar_url"`
 	Role      string `json:"role"`
+	Token     string `json:"token,omitempty"`
 }
 
 func FromEntity(user entities.User) UserResponse {

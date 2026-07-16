@@ -12,10 +12,16 @@ import (
 	"vault/src/features/posts/domain/repositories"
 )
 
+// author_name/author_avatar_url/comments_count no viven en posts -- se
+// resuelven aquí con un JOIN a users y un subquery a comments, para que el
+// frontend no tenga que pedir cada autor por separado.
 const selectPostsQuery = `
-	SELECT id, user_id, asset_id, content, sentiment_score, COALESCE(sentiment_label, ''),
-	       toxicity_score, is_visible, likes_count, created_at
-	FROM posts
+	SELECT p.id, p.user_id, p.asset_id, p.content, p.sentiment_score, COALESCE(p.sentiment_label, ''),
+	       p.toxicity_score, p.is_visible, p.likes_count, p.created_at,
+	       u.name, COALESCE(u.avatar_url, ''),
+	       (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.is_visible = true)
+	FROM posts p
+	JOIN users u ON u.id = p.user_id
 `
 
 type PostgreSQLPostRepository struct {
@@ -28,17 +34,24 @@ func NewPostgreSQLPostRepository(pool *pgxpool.Pool) *PostgreSQLPostRepository {
 
 func scanPost(row pgx.Row) (entities.Post, error) {
 	var p entities.Post
-	err := row.Scan(&p.ID, &p.UserID, &p.AssetID, &p.Content, &p.SentimentScore, &p.SentimentLabel, &p.ToxicityScore, &p.IsVisible, &p.LikesCount, &p.CreatedAt)
+	err := row.Scan(
+		&p.ID, &p.UserID, &p.AssetID, &p.Content, &p.SentimentScore, &p.SentimentLabel,
+		&p.ToxicityScore, &p.IsVisible, &p.LikesCount, &p.CreatedAt,
+		&p.AuthorName, &p.AuthorAvatarURL, &p.CommentsCount,
+	)
 	return p, err
 }
 
 func (r *PostgreSQLPostRepository) Create(ctx context.Context, post entities.Post) (entities.Post, error) {
 	const query = `
-		INSERT INTO posts (user_id, asset_id, content)
-		VALUES ($1, $2, $3)
+		INSERT INTO posts (id, user_id, asset_id, content, sentiment_score, sentiment_label, toxicity_score, is_visible)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8)
 		RETURNING id
 	`
-	err := r.pool.QueryRow(ctx, query, post.UserID, post.AssetID, post.Content).Scan(&post.ID)
+	err := r.pool.QueryRow(ctx, query,
+		post.ID, post.UserID, post.AssetID, post.Content,
+		post.SentimentScore, post.SentimentLabel, post.ToxicityScore, post.IsVisible,
+	).Scan(&post.ID)
 	if err != nil {
 		return entities.Post{}, fmt.Errorf("no se pudo crear la publicacion: %w", err)
 	}
@@ -46,7 +59,7 @@ func (r *PostgreSQLPostRepository) Create(ctx context.Context, post entities.Pos
 }
 
 func (r *PostgreSQLPostRepository) FindAllVisible(ctx context.Context) ([]entities.Post, error) {
-	rows, err := r.pool.Query(ctx, selectPostsQuery+" WHERE is_visible = true ORDER BY created_at DESC")
+	rows, err := r.pool.Query(ctx, selectPostsQuery+" WHERE p.is_visible = true ORDER BY p.created_at DESC")
 	if err != nil {
 		return nil, fmt.Errorf("no se pudieron listar las publicaciones: %w", err)
 	}
@@ -64,7 +77,7 @@ func (r *PostgreSQLPostRepository) FindAllVisible(ctx context.Context) ([]entiti
 }
 
 func (r *PostgreSQLPostRepository) FindByID(ctx context.Context, id string) (entities.Post, error) {
-	row := r.pool.QueryRow(ctx, selectPostsQuery+" WHERE id = $1", id)
+	row := r.pool.QueryRow(ctx, selectPostsQuery+" WHERE p.id = $1", id)
 	p, err := scanPost(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return entities.Post{}, repositories.ErrPostNotFound

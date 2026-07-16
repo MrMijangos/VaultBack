@@ -4,11 +4,21 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"vault/src/features/comments/domain/entities"
 	"vault/src/features/comments/domain/repositories"
 )
+
+// author_name/author_avatar_url no viven en comments -- se resuelven con
+// un JOIN a users, igual que en posts.
+const selectCommentsQuery = `
+	SELECT c.id, c.post_id, c.user_id, c.content, c.toxicity_score, c.is_visible, c.created_at,
+	       u.name, COALESCE(u.avatar_url, '')
+	FROM comments c
+	JOIN users u ON u.id = c.user_id
+`
 
 type PostgreSQLCommentRepository struct {
 	pool *pgxpool.Pool
@@ -18,27 +28,36 @@ func NewPostgreSQLCommentRepository(pool *pgxpool.Pool) *PostgreSQLCommentReposi
 	return &PostgreSQLCommentRepository{pool: pool}
 }
 
+func scanComment(row pgx.Row) (entities.Comment, error) {
+	var c entities.Comment
+	err := row.Scan(
+		&c.ID, &c.PostID, &c.UserID, &c.Content, &c.ToxicityScore, &c.IsVisible, &c.CreatedAt,
+		&c.AuthorName, &c.AuthorAvatarURL,
+	)
+	return c, err
+}
+
 func (r *PostgreSQLCommentRepository) Create(ctx context.Context, comment entities.Comment) (entities.Comment, error) {
 	const query = `
-		INSERT INTO comments (post_id, user_id, content)
-		VALUES ($1, $2, $3)
-		RETURNING id, is_visible, created_at
+		INSERT INTO comments (id, post_id, user_id, content, toxicity_score, is_visible)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	err := r.pool.QueryRow(ctx, query, comment.PostID, comment.UserID, comment.Content).Scan(&comment.ID, &comment.IsVisible, &comment.CreatedAt)
+	_, err := r.pool.Exec(ctx, query,
+		comment.ID, comment.PostID, comment.UserID, comment.Content, comment.ToxicityScore, comment.IsVisible,
+	)
 	if err != nil {
 		return entities.Comment{}, fmt.Errorf("no se pudo crear el comentario: %w", err)
 	}
-	return comment, nil
+	return r.findByID(ctx, comment.ID)
+}
+
+func (r *PostgreSQLCommentRepository) findByID(ctx context.Context, id string) (entities.Comment, error) {
+	row := r.pool.QueryRow(ctx, selectCommentsQuery+" WHERE c.id = $1", id)
+	return scanComment(row)
 }
 
 func (r *PostgreSQLCommentRepository) FindByPostID(ctx context.Context, postID string) ([]entities.Comment, error) {
-	const query = `
-		SELECT id, post_id, user_id, content, toxicity_score, is_visible, created_at
-		FROM comments
-		WHERE post_id = $1 AND is_visible = true
-		ORDER BY created_at
-	`
-	rows, err := r.pool.Query(ctx, query, postID)
+	rows, err := r.pool.Query(ctx, selectCommentsQuery+" WHERE c.post_id = $1 AND c.is_visible = true ORDER BY c.created_at", postID)
 	if err != nil {
 		return nil, fmt.Errorf("no se pudieron listar los comentarios: %w", err)
 	}
@@ -46,8 +65,8 @@ func (r *PostgreSQLCommentRepository) FindByPostID(ctx context.Context, postID s
 
 	var list []entities.Comment
 	for rows.Next() {
-		var c entities.Comment
-		if err := rows.Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.ToxicityScore, &c.IsVisible, &c.CreatedAt); err != nil {
+		c, err := scanComment(rows)
+		if err != nil {
 			return nil, fmt.Errorf("no se pudo leer el comentario: %w", err)
 		}
 		list = append(list, c)

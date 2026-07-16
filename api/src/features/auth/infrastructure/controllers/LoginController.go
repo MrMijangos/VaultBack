@@ -38,5 +38,6 @@ func (c *LoginController) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	security.SetAuthCookie(w, token, c.cookieSecure)
+	user.Token = token
 	httpresponse.WriteJSON(w, http.StatusOK, user)
 }

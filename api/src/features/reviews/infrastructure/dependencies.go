@@ -3,14 +3,15 @@ package infrastructure
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vault/src/core/moderation"
 	"vault/src/features/reviews/application"
 	"vault/src/features/reviews/infrastructure/adapters"
 	"vault/src/features/reviews/infrastructure/controllers"
 )
 
-func BuildCreateReviewController(pool *pgxpool.Pool) *controllers.CreateReviewController {
+func BuildCreateReviewController(pool *pgxpool.Pool, moderationClient *moderation.Client) *controllers.CreateReviewController {
 	repo := adapters.NewPostgreSQLReviewRepository(pool)
-	useCase := application.NewCreateReviewUseCase(repo)
+	useCase := application.NewCreateReviewUseCase(repo, moderationClient)
 	return controllers.NewCreateReviewController(useCase)
 }
 

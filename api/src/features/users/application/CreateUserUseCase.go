@@ -14,11 +14,12 @@ import (
 var ErrEmailTaken = errors.New("ya existe una cuenta con ese correo")
 
 type CreateUserUseCase struct {
-	repo repositories.UserRepository
+	repo      repositories.UserRepository
+	jwtSecret string
 }
 
-func NewCreateUserUseCase(repo repositories.UserRepository) *CreateUserUseCase {
-	return &CreateUserUseCase{repo: repo}
+func NewCreateUserUseCase(repo repositories.UserRepository, jwtSecret string) *CreateUserUseCase {
+	return &CreateUserUseCase{repo: repo, jwtSecret: jwtSecret}
 }
 
 func (uc *CreateUserUseCase) Execute(ctx context.Context, req request.CreateUserRequest) (response.UserResponse, error) {
@@ -52,5 +53,12 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, req request.CreateUser
 		return response.UserResponse{}, err
 	}
 
-	return response.FromEntity(created), nil
+	token, err := security.GenerateToken(created.ID, created.Role, uc.jwtSecret)
+	if err != nil {
+		return response.UserResponse{}, err
+	}
+
+	result := response.FromEntity(created)
+	result.Token = token
+	return result, nil
 }

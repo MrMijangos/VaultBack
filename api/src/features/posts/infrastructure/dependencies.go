@@ -4,14 +4,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"vault/src/core/cloudinary"
+	"vault/src/core/moderation"
 	"vault/src/features/posts/application"
 	"vault/src/features/posts/infrastructure/adapters"
 	"vault/src/features/posts/infrastructure/controllers"
 )
 
-func BuildCreatePostController(pool *pgxpool.Pool) *controllers.CreatePostController {
+func BuildCreatePostController(pool *pgxpool.Pool, moderationClient *moderation.Client) *controllers.CreatePostController {
 	repo := adapters.NewPostgreSQLPostRepository(pool)
-	useCase := application.NewCreatePostUseCase(repo)
+	useCase := application.NewCreatePostUseCase(repo, moderationClient)
 	return controllers.NewCreatePostController(useCase)
 }
 

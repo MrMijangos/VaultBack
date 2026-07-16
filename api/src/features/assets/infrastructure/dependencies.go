@@ -4,14 +4,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"vault/src/core/cloudinary"
+	"vault/src/core/eventbus"
 	"vault/src/features/assets/application"
 	"vault/src/features/assets/infrastructure/adapters"
 	"vault/src/features/assets/infrastructure/controllers"
 )
 
-func BuildCreateAssetController(pool *pgxpool.Pool) *controllers.CreateAssetController {
+func BuildCreateAssetController(pool *pgxpool.Pool, publisher eventbus.Publisher) *controllers.CreateAssetController {
 	repo := adapters.NewPostgreSQLAssetRepository(pool)
-	useCase := application.NewCreateAssetUseCase(repo)
+	useCase := application.NewCreateAssetUseCase(repo, publisher)
 	return controllers.NewCreateAssetController(useCase)
 }
 
@@ -27,9 +28,9 @@ func BuildGetAssetByIdController(pool *pgxpool.Pool) *controllers.GetAssetByIdCo
 	return controllers.NewGetAssetByIdController(useCase)
 }
 
-func BuildUpdateAssetController(pool *pgxpool.Pool) *controllers.UpdateAssetController {
+func BuildUpdateAssetController(pool *pgxpool.Pool, publisher eventbus.Publisher) *controllers.UpdateAssetController {
 	repo := adapters.NewPostgreSQLAssetRepository(pool)
-	useCase := application.NewUpdateAssetUseCase(repo)
+	useCase := application.NewUpdateAssetUseCase(repo, publisher)
 	return controllers.NewUpdateAssetController(useCase)
 }
 

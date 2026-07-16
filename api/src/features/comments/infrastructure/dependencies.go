@@ -3,14 +3,15 @@ package infrastructure
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vault/src/core/moderation"
 	"vault/src/features/comments/application"
 	"vault/src/features/comments/infrastructure/adapters"
 	"vault/src/features/comments/infrastructure/controllers"
 )
 
-func BuildCreateCommentController(pool *pgxpool.Pool) *controllers.CreateCommentController {
+func BuildCreateCommentController(pool *pgxpool.Pool, moderationClient *moderation.Client) *controllers.CreateCommentController {
 	repo := adapters.NewPostgreSQLCommentRepository(pool)
-	useCase := application.NewCreateCommentUseCase(repo)
+	useCase := application.NewCreateCommentUseCase(repo, moderationClient)
 	return controllers.NewCreateCommentController(useCase)
 }
 

@@ -7,7 +7,9 @@ import (
 
 	"vault/src/core/cloudinary"
 	"vault/src/core/config"
+	"vault/src/core/eventbus"
 	"vault/src/core/middleware"
+	"vault/src/core/moderation"
 	assetsInfra "vault/src/features/assets/infrastructure"
 	assetsRouter "vault/src/features/assets/infrastructure/router"
 	authInfra "vault/src/features/auth/infrastructure"
@@ -53,11 +55,30 @@ func main() {
 		log.Fatalf("error al migrar el esquema: %v", err)
 	}
 
+	// Publisher de eventos hacia vault-ai-service (NLP/ML). Si RabbitMQ no
+	// está disponible, se usa un publisher "noop" y la API sigue funcionando
+	// con normalidad (solo no se dispara NLP/ML para contenido nuevo).
+	var publisher eventbus.Publisher
+	rabbitPublisher, err := eventbus.NewRabbitMQPublisher(cfg.RabbitMQURL)
+	if err != nil {
+		log.Printf("advertencia: RabbitMQ no disponible (%v), NLP/ML no se disparará hasta reiniciar la API", err)
+		publisher = eventbus.NoopPublisher{}
+	} else {
+		defer rabbitPublisher.Close()
+		publisher = rabbitPublisher
+		eventbus.StartNLPAnalyzedConsumer(cfg.RabbitMQURL, pool)
+	}
+
+	// Cliente síncrono de moderación: se llama antes de guardar un post,
+	// comentario o reseña. Si el contenido es tóxico, o si el servicio de
+	// NLP no responde, la publicación se rechaza (no queda guardada).
+	moderationClient := moderation.NewClient(cfg.NLPServiceURL)
+
 	mux := http.NewServeMux()
 
 	usersRouter.RegisterRoutes(
 		mux,
-		usersInfra.BuildCreateUserController(pool),
+		usersInfra.BuildCreateUserController(pool, cfg.JWTSecret, cfg.CookieSecure),
 		usersInfra.BuildGetAllUsersController(pool),
 		usersInfra.BuildGetUserByIdController(pool),
 		usersInfra.BuildUpdateUserController(pool),
@@ -70,10 +91,10 @@ func main() {
 
 	assetsRouter.RegisterRoutes(
 		mux,
-		assetsInfra.BuildCreateAssetController(pool),
+		assetsInfra.BuildCreateAssetController(pool, publisher),
 		assetsInfra.BuildGetAllAssetsController(pool),
 		assetsInfra.BuildGetAssetByIdController(pool),
-		assetsInfra.BuildUpdateAssetController(pool),
+		assetsInfra.BuildUpdateAssetController(pool, publisher),
 		assetsInfra.BuildDeleteAssetController(pool),
 		assetsInfra.BuildUploadAssetPhotoController(pool, imageUploader),
 		cfg.JWTSecret,
@@ -109,7 +130,7 @@ func main() {
 
 	postsRouter.RegisterRoutes(
 		mux,
-		postsInfra.BuildCreatePostController(pool),
+		postsInfra.BuildCreatePostController(pool, moderationClient),
 		postsInfra.BuildGetAllPostsController(pool),
 		postsInfra.BuildGetPostByIdController(pool),
 		postsInfra.BuildUpdatePostController(pool),
@@ -122,7 +143,7 @@ func main() {
 
 	commentsRouter.RegisterRoutes(
 		mux,
-		commentsInfra.BuildCreateCommentController(pool),
+		commentsInfra.BuildCreateCommentController(pool, moderationClient),
 		commentsInfra.BuildGetCommentsByPostController(pool),
 		commentsInfra.BuildDeleteCommentController(pool),
 		cfg.JWTSecret,
@@ -130,7 +151,7 @@ func main() {
 
 	reviewsRouter.RegisterRoutes(
 		mux,
-		reviewsInfra.BuildCreateReviewController(pool),
+		reviewsInfra.BuildCreateReviewController(pool, moderationClient),
 		reviewsInfra.BuildGetReviewsByProviderController(pool),
 		reviewsInfra.BuildGetReviewByIdController(pool),
 		reviewsInfra.BuildDeleteReviewController(pool),

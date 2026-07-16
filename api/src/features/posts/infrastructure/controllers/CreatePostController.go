@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"vault/src/core/httpresponse"
+	"vault/src/core/moderation"
 	"vault/src/core/security"
 	"vault/src/features/posts/application"
 	"vault/src/features/posts/domain/dto/request"
@@ -33,7 +35,14 @@ func (c *CreatePostController) Handle(w http.ResponseWriter, r *http.Request) {
 
 	created, err := c.useCase.Execute(r.Context(), claims.UserID, req)
 	if err != nil {
-		httpresponse.WriteError(w, http.StatusBadRequest, err.Error())
+		switch {
+		case errors.Is(err, moderation.ErrToxicContent):
+			httpresponse.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		case errors.Is(err, moderation.ErrUnavailable):
+			httpresponse.WriteError(w, http.StatusServiceUnavailable, err.Error())
+		default:
+			httpresponse.WriteError(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 

@@ -2,8 +2,10 @@ package application
 
 import (
 	"context"
+	"log"
 	"time"
 
+	"vault/src/core/eventbus"
 	"vault/src/features/assets/domain/dto/request"
 	"vault/src/features/assets/domain/dto/response"
 	"vault/src/features/assets/domain/entities"
@@ -11,11 +13,12 @@ import (
 )
 
 type UpdateAssetUseCase struct {
-	repo repositories.AssetRepository
+	repo      repositories.AssetRepository
+	publisher eventbus.Publisher
 }
 
-func NewUpdateAssetUseCase(repo repositories.AssetRepository) *UpdateAssetUseCase {
-	return &UpdateAssetUseCase{repo: repo}
+func NewUpdateAssetUseCase(repo repositories.AssetRepository, publisher eventbus.Publisher) *UpdateAssetUseCase {
+	return &UpdateAssetUseCase{repo: repo, publisher: publisher}
 }
 
 func (uc *UpdateAssetUseCase) Execute(ctx context.Context, id string, userID string, req request.UpdateAssetRequest) (response.AssetResponse, error) {
@@ -46,6 +49,10 @@ func (uc *UpdateAssetUseCase) Execute(ctx context.Context, id string, userID str
 	updated, err := uc.repo.Update(ctx, id, userID, asset)
 	if err != nil {
 		return response.AssetResponse{}, err
+	}
+
+	if err := uc.publisher.Publish(ctx, "asset.updated", updated.UserID, updated.ID, nil); err != nil {
+		log.Printf("no se pudo publicar asset.updated: %v", err)
 	}
 
 	return response.FromEntity(updated, nil), nil

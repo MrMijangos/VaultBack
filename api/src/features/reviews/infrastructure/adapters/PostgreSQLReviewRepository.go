@@ -13,8 +13,10 @@ import (
 )
 
 const selectReviewsQuery = `
-	SELECT id, user_id, provider_id, content, is_visible, likes_count, created_at
-	FROM reviews
+	SELECT r.id, r.user_id, r.provider_id, r.content, r.is_visible, r.likes_count, r.created_at,
+	       u.name, COALESCE(u.avatar_url, '')
+	FROM reviews r
+	JOIN users u ON u.id = r.user_id
 `
 
 type PostgreSQLReviewRepository struct {
@@ -27,17 +29,23 @@ func NewPostgreSQLReviewRepository(pool *pgxpool.Pool) *PostgreSQLReviewReposito
 
 func scanReview(row pgx.Row) (entities.Review, error) {
 	var r entities.Review
-	err := row.Scan(&r.ID, &r.UserID, &r.ProviderID, &r.Content, &r.IsVisible, &r.LikesCount, &r.CreatedAt)
+	err := row.Scan(
+		&r.ID, &r.UserID, &r.ProviderID, &r.Content, &r.IsVisible, &r.LikesCount, &r.CreatedAt,
+		&r.AuthorName, &r.AuthorAvatarURL,
+	)
 	return r, err
 }
 
 func (r *PostgreSQLReviewRepository) Create(ctx context.Context, review entities.Review) (entities.Review, error) {
 	const query = `
-		INSERT INTO reviews (user_id, provider_id, content)
-		VALUES ($1, $2, $3)
+		INSERT INTO reviews (id, user_id, provider_id, content, sentiment_score, toxicity_score, is_visible)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
-	err := r.pool.QueryRow(ctx, query, review.UserID, review.ProviderID, review.Content).Scan(&review.ID)
+	err := r.pool.QueryRow(ctx, query,
+		review.ID, review.UserID, review.ProviderID, review.Content,
+		review.SentimentScore, review.ToxicityScore, review.IsVisible,
+	).Scan(&review.ID)
 	if err != nil {
 		return entities.Review{}, fmt.Errorf("no se pudo crear la reseña: %w", err)
 	}
@@ -45,7 +53,7 @@ func (r *PostgreSQLReviewRepository) Create(ctx context.Context, review entities
 }
 
 func (r *PostgreSQLReviewRepository) FindByProviderID(ctx context.Context, providerID string) ([]entities.Review, error) {
-	rows, err := r.pool.Query(ctx, selectReviewsQuery+" WHERE provider_id = $1 AND is_visible = true ORDER BY created_at DESC", providerID)
+	rows, err := r.pool.Query(ctx, selectReviewsQuery+" WHERE r.provider_id = $1 AND r.is_visible = true ORDER BY r.created_at DESC", providerID)
 	if err != nil {
 		return nil, fmt.Errorf("no se pudieron listar las reseñas: %w", err)
 	}
@@ -63,7 +71,7 @@ func (r *PostgreSQLReviewRepository) FindByProviderID(ctx context.Context, provi
 }
 
 func (r *PostgreSQLReviewRepository) FindByID(ctx context.Context, id string) (entities.Review, error) {
-	row := r.pool.QueryRow(ctx, selectReviewsQuery+" WHERE id = $1", id)
+	row := r.pool.QueryRow(ctx, selectReviewsQuery+" WHERE r.id = $1", id)
 	rv, err := scanReview(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return entities.Review{}, repositories.ErrReviewNotFound

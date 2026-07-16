@@ -25,6 +25,8 @@ func LoadConfig() (*Config, error) {
 		CloudinaryCloudName: os.Getenv("CLOUDINARY_CLOUD_NAME"),
 		CloudinaryAPIKey:    os.Getenv("CLOUDINARY_API_KEY"),
 		CloudinaryAPISecret: os.Getenv("CLOUDINARY_API_SECRET"),
+		RabbitMQURL:         os.Getenv("RABBITMQ_URL"),
+		NLPServiceURL:       os.Getenv("NLP_SERVICE_URL"),
 	}
 
 	if cfg.AppPort == "" {
@@ -35,6 +37,12 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.CORSOrigin == "" {
 		cfg.CORSOrigin = "*"
+	}
+	if cfg.RabbitMQURL == "" {
+		cfg.RabbitMQURL = "amqp://guest:guest@localhost:5672/"
+	}
+	if cfg.NLPServiceURL == "" {
+		cfg.NLPServiceURL = "http://localhost:8006"
 	}
 
 	required := map[string]string{

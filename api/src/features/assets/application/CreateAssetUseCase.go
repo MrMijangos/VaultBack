@@ -2,8 +2,10 @@ package application
 
 import (
 	"context"
+	"log"
 	"time"
 
+	"vault/src/core/eventbus"
 	"vault/src/features/assets/domain/dto/request"
 	"vault/src/features/assets/domain/dto/response"
 	"vault/src/features/assets/domain/entities"
@@ -11,11 +13,12 @@ import (
 )
 
 type CreateAssetUseCase struct {
-	repo repositories.AssetRepository
+	repo      repositories.AssetRepository
+	publisher eventbus.Publisher
 }
 
-func NewCreateAssetUseCase(repo repositories.AssetRepository) *CreateAssetUseCase {
-	return &CreateAssetUseCase{repo: repo}
+func NewCreateAssetUseCase(repo repositories.AssetRepository, publisher eventbus.Publisher) *CreateAssetUseCase {
+	return &CreateAssetUseCase{repo: repo, publisher: publisher}
 }
 
 func (uc *CreateAssetUseCase) Execute(ctx context.Context, userID string, req request.CreateAssetRequest) (response.AssetResponse, error) {
@@ -47,6 +50,12 @@ func (uc *CreateAssetUseCase) Execute(ctx context.Context, userID string, req re
 	created, err := uc.repo.Create(ctx, asset)
 	if err != nil {
 		return response.AssetResponse{}, err
+	}
+
+	// asset.updated (no asset.created): vault-ai-service usa la misma
+	// routing key para cualquier cambio que afecte el perfil ML del usuario.
+	if err := uc.publisher.Publish(ctx, "asset.updated", created.UserID, created.ID, nil); err != nil {
+		log.Printf("no se pudo publicar asset.updated: %v", err)
 	}
 
 	return response.FromEntity(created, nil), nil
