@@ -138,6 +138,9 @@ func main() {
 		postsInfra.BuildUploadPostPhotoController(pool, imageUploader),
 		postsInfra.BuildLikePostController(pool),
 		postsInfra.BuildUnlikePostController(pool),
+		postsInfra.BuildSavePostController(pool),
+		postsInfra.BuildUnsavePostController(pool),
+		postsInfra.BuildGetSavedPostsController(pool),
 		cfg.JWTSecret,
 	)
 

@@ -57,3 +57,21 @@ func BuildUnlikePostController(pool *pgxpool.Pool) *controllers.UnlikePostContro
 	useCase := application.NewUnlikePostUseCase(repo)
 	return controllers.NewUnlikePostController(useCase)
 }
+
+func BuildSavePostController(pool *pgxpool.Pool) *controllers.SavePostController {
+	repo := adapters.NewPostgreSQLPostRepository(pool)
+	useCase := application.NewSavePostUseCase(repo)
+	return controllers.NewSavePostController(useCase)
+}
+
+func BuildUnsavePostController(pool *pgxpool.Pool) *controllers.UnsavePostController {
+	repo := adapters.NewPostgreSQLPostRepository(pool)
+	useCase := application.NewUnsavePostUseCase(repo)
+	return controllers.NewUnsavePostController(useCase)
+}
+
+func BuildGetSavedPostsController(pool *pgxpool.Pool) *controllers.GetSavedPostsController {
+	repo := adapters.NewPostgreSQLPostRepository(pool)
+	useCase := application.NewGetSavedPostsUseCase(repo)
+	return controllers.NewGetSavedPostsController(useCase)
+}

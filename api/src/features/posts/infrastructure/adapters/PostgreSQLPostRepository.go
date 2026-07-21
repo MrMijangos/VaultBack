@@ -186,3 +186,45 @@ func (r *PostgreSQLPostRepository) Unlike(ctx context.Context, postID string, us
 
 	return tx.Commit(ctx)
 }
+
+func (r *PostgreSQLPostRepository) Save(ctx context.Context, postID string, userID string) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO saved_posts (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		postID, userID)
+	if err != nil {
+		return fmt.Errorf("no se pudo guardar la publicacion: %w", err)
+	}
+	return nil
+}
+
+func (r *PostgreSQLPostRepository) Unsave(ctx context.Context, postID string, userID string) error {
+	_, err := r.pool.Exec(ctx,
+		`DELETE FROM saved_posts WHERE post_id = $1 AND user_id = $2`, postID, userID)
+	if err != nil {
+		return fmt.Errorf("no se pudo quitar la publicacion guardada: %w", err)
+	}
+	return nil
+}
+
+func (r *PostgreSQLPostRepository) FindSavedByUser(ctx context.Context, userID string) ([]entities.Post, error) {
+	query := selectPostsQuery + `
+		JOIN saved_posts sp ON sp.post_id = p.id
+		WHERE sp.user_id = $1
+		ORDER BY sp.created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudieron listar las publicaciones guardadas: %w", err)
+	}
+	defer rows.Close()
+
+	var list []entities.Post
+	for rows.Next() {
+		p, err := scanPost(rows)
+		if err != nil {
+			return nil, fmt.Errorf("no se pudo leer la publicacion: %w", err)
+		}
+		list = append(list, p)
+	}
+	return list, rows.Err()
+}

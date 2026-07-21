@@ -102,6 +102,15 @@ CREATE TABLE IF NOT EXISTS post_likes (
 	CONSTRAINT post_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS saved_posts (
+	post_id uuid NOT NULL,
+	user_id uuid NOT NULL,
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT saved_posts_pkey PRIMARY KEY (post_id, user_id),
+	CONSTRAINT saved_posts_post_id_fkey FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+	CONSTRAINT saved_posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS comments (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	post_id uuid NOT NULL,

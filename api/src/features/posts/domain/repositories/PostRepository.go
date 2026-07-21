@@ -19,4 +19,7 @@ type PostRepository interface {
 	AddPhoto(ctx context.Context, postID string, url string) (entities.PostPhoto, error)
 	Like(ctx context.Context, postID string, userID string) error
 	Unlike(ctx context.Context, postID string, userID string) error
+	Save(ctx context.Context, postID string, userID string) error
+	Unsave(ctx context.Context, postID string, userID string) error
+	FindSavedByUser(ctx context.Context, userID string) ([]entities.Post, error)
 }
