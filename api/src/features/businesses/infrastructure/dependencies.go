@@ -6,6 +6,7 @@ import (
 	"vault/src/features/businesses/application"
 	"vault/src/features/businesses/infrastructure/adapters"
 	"vault/src/features/businesses/infrastructure/controllers"
+	reviewsAdapters "vault/src/features/reviews/infrastructure/adapters"
 )
 
 func BuildCreateBusinessController(pool *pgxpool.Pool) *controllers.CreateBusinessController {
@@ -16,13 +17,15 @@ func BuildCreateBusinessController(pool *pgxpool.Pool) *controllers.CreateBusine
 
 func BuildGetAllBusinessesController(pool *pgxpool.Pool) *controllers.GetAllBusinessesController {
 	repo := adapters.NewPostgreSQLBusinessRepository(pool)
-	useCase := application.NewGetAllBusinessesUseCase(repo)
+	ratingRepo := reviewsAdapters.NewPostgreSQLReviewRepository(pool)
+	useCase := application.NewGetAllBusinessesUseCase(repo, ratingRepo)
 	return controllers.NewGetAllBusinessesController(useCase)
 }
 
 func BuildGetBusinessByIdController(pool *pgxpool.Pool) *controllers.GetBusinessByIdController {
 	repo := adapters.NewPostgreSQLBusinessRepository(pool)
-	useCase := application.NewGetBusinessByIdUseCase(repo)
+	ratingRepo := reviewsAdapters.NewPostgreSQLReviewRepository(pool)
+	useCase := application.NewGetBusinessByIdUseCase(repo, ratingRepo)
 	return controllers.NewGetBusinessByIdController(useCase)
 }
 

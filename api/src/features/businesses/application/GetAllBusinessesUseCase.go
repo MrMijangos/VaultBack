@@ -8,11 +8,12 @@ import (
 )
 
 type GetAllBusinessesUseCase struct {
-	repo repositories.BusinessRepository
+	repo       repositories.BusinessRepository
+	ratingRepo repositories.RatingProvider
 }
 
-func NewGetAllBusinessesUseCase(repo repositories.BusinessRepository) *GetAllBusinessesUseCase {
-	return &GetAllBusinessesUseCase{repo: repo}
+func NewGetAllBusinessesUseCase(repo repositories.BusinessRepository, ratingRepo repositories.RatingProvider) *GetAllBusinessesUseCase {
+	return &GetAllBusinessesUseCase{repo: repo, ratingRepo: ratingRepo}
 }
 
 func (uc *GetAllBusinessesUseCase) Execute(ctx context.Context) ([]response.BusinessResponse, error) {
@@ -20,5 +21,14 @@ func (uc *GetAllBusinessesUseCase) Execute(ctx context.Context) ([]response.Busi
 	if err != nil {
 		return nil, err
 	}
-	return response.FromEntities(list), nil
+	out := response.FromEntities(list)
+	for i, b := range list {
+		rating, total, err := uc.ratingRepo.GetProviderRating(ctx, b.UserID)
+		if err != nil {
+			return nil, err
+		}
+		out[i].Rating = rating
+		out[i].TotalReviews = total
+	}
+	return out, nil
 }

@@ -13,10 +13,32 @@ import (
 )
 
 const selectReviewsQuery = `
-	SELECT r.id, r.user_id, r.provider_id, r.content, r.is_visible, r.likes_count, r.created_at,
+	SELECT r.id, r.user_id, r.provider_id, r.content, r.sentiment_score, r.sentiment_label,
+	       r.is_visible, r.likes_count, r.created_at,
 	       u.name, COALESCE(u.avatar_url, '')
 	FROM reviews r
 	JOIN users u ON u.id = r.user_id
+`
+
+// providerRatingQuery convierte cada reseña visible y ya analizada en una
+// puntuación de 1 a 10: 5.5 es el punto neutral, y se desplaza hacia 10
+// (positivo) o hacia 1 (negativo) según la confianza del modelo en esa
+// etiqueta -- ver AnalyzeSentiment en el servicio de NLP. Promediar esto en
+// vez del sentiment_score crudo es necesario porque ese score es solo la
+// confianza del modelo en su etiqueta (siempre alto sin importar si es
+// positiva o negativa), no una medida de qué tan buena es la reseña.
+const providerRatingQuery = `
+	SELECT
+		AVG(
+			CASE sentiment_label
+				WHEN 'positivo' THEN 5.5 + sentiment_score * 4.5
+				WHEN 'negativo' THEN 5.5 - sentiment_score * 4.5
+				ELSE 5.5
+			END
+		),
+		COUNT(*)
+	FROM reviews
+	WHERE provider_id = $1 AND is_visible = true AND sentiment_label IS NOT NULL
 `
 
 type PostgreSQLReviewRepository struct {
@@ -30,7 +52,8 @@ func NewPostgreSQLReviewRepository(pool *pgxpool.Pool) *PostgreSQLReviewReposito
 func scanReview(row pgx.Row) (entities.Review, error) {
 	var r entities.Review
 	err := row.Scan(
-		&r.ID, &r.UserID, &r.ProviderID, &r.Content, &r.IsVisible, &r.LikesCount, &r.CreatedAt,
+		&r.ID, &r.UserID, &r.ProviderID, &r.Content, &r.SentimentScore, &r.SentimentLabel,
+		&r.IsVisible, &r.LikesCount, &r.CreatedAt,
 		&r.AuthorName, &r.AuthorAvatarURL,
 	)
 	return r, err
@@ -111,6 +134,16 @@ func (r *PostgreSQLReviewRepository) Like(ctx context.Context, reviewID string, 
 	}
 
 	return tx.Commit(ctx)
+}
+
+func (r *PostgreSQLReviewRepository) GetProviderRating(ctx context.Context, providerID string) (*float64, int, error) {
+	var rating *float64
+	var total int
+	err := r.pool.QueryRow(ctx, providerRatingQuery, providerID).Scan(&rating, &total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("no se pudo calcular la calificación del proveedor: %w", err)
+	}
+	return rating, total, nil
 }
 
 func (r *PostgreSQLReviewRepository) Unlike(ctx context.Context, reviewID string, userID string) error {

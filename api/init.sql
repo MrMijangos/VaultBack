@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 	provider_id uuid NOT NULL,
 	content text NOT NULL,
 	sentiment_score double precision,
+	sentiment_label character varying CHECK (sentiment_label::text = ANY (ARRAY['positivo'::character varying, 'negativo'::character varying, 'neutral'::character varying]::text[])),
 	toxicity_score double precision,
 	is_visible boolean DEFAULT true,
 	likes_count integer DEFAULT 0,
@@ -129,6 +130,12 @@ CREATE TABLE IF NOT EXISTS reviews (
 	CONSTRAINT reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 	CONSTRAINT reviews_provider_id_fkey FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- CREATE TABLE IF NOT EXISTS no agrega columnas a una tabla que ya existe
+-- (Railway y el Postgres local ya tienen "reviews" creada) -- este ALTER
+-- idempotente sí se aplica en cada arranque vía RunMigrations.
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS sentiment_label character varying
+	CHECK (sentiment_label::text = ANY (ARRAY['positivo'::character varying, 'negativo'::character varying, 'neutral'::character varying]::text[]));
 
 CREATE TABLE IF NOT EXISTS review_likes (
 	review_id uuid NOT NULL,

@@ -153,6 +153,7 @@ func main() {
 		mux,
 		reviewsInfra.BuildCreateReviewController(pool, moderationClient),
 		reviewsInfra.BuildGetReviewsByProviderController(pool),
+		reviewsInfra.BuildGetProviderRatingController(pool),
 		reviewsInfra.BuildGetReviewByIdController(pool),
 		reviewsInfra.BuildDeleteReviewController(pool),
 		reviewsInfra.BuildLikeReviewController(pool),

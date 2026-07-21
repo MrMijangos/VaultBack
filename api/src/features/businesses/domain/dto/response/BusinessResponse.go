@@ -7,14 +7,16 @@ import (
 )
 
 type BusinessResponse struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	Name        string    `json:"name"`
-	Type        string    `json:"type"`
-	Description string    `json:"description"`
-	Location    string    `json:"location"`
-	IsVerified  bool      `json:"is_verified"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	UserID       string    `json:"user_id"`
+	Name         string    `json:"name"`
+	Type         string    `json:"type"`
+	Description  string    `json:"description"`
+	Location     string    `json:"location"`
+	IsVerified   bool      `json:"is_verified"`
+	CreatedAt    time.Time `json:"created_at"`
+	Rating       *float64  `json:"rating"`
+	TotalReviews int       `json:"total_reviews"`
 }
 
 func FromEntity(b entities.Business) BusinessResponse {

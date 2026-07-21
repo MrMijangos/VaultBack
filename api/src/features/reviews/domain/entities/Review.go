@@ -8,6 +8,7 @@ type Review struct {
 	ProviderID      string
 	Content         string
 	SentimentScore  *float64
+	SentimentLabel  *string
 	ToxicityScore   *float64
 	IsVisible       bool
 	LikesCount      int

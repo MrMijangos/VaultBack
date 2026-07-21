@@ -1,0 +1,21 @@
+{
+  "name": "vault-blockchain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Certifica assets de Vault en Vara Network (Gear Protocol)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@gear-js/api": "^0.45.0",
+    "@polkadot/api": "^16.5.1",
+    "@polkadot/types": "^16.5.6",
+    "@polkadot/wasm-crypto": "^7.5.4",
+    "amqplib": "^0.10.9",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.22.0"
+  }
+}

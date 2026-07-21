@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"log"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/jackc/pgx/v5/pgxpool"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
@@ -106,8 +106,8 @@ func handleNLPAnalyzed(pool *pgxpool.Pool, msg amqp.Delivery) {
 		query = `UPDATE posts SET sentiment_score = $1, sentiment_label = $2, toxicity_score = $3, is_visible = $4 WHERE id = $5`
 		args = []any{payload.SentimentScore, payload.SentimentLabel, payload.ToxicityScore, isVisible, payload.SourceID}
 	case "review":
-		query = `UPDATE reviews SET sentiment_score = $1, toxicity_score = $2, is_visible = $3 WHERE id = $4`
-		args = []any{payload.SentimentScore, payload.ToxicityScore, isVisible, payload.SourceID}
+		query = `UPDATE reviews SET sentiment_score = $1, sentiment_label = $2, toxicity_score = $3, is_visible = $4 WHERE id = $5`
+		args = []any{payload.SentimentScore, payload.SentimentLabel, payload.ToxicityScore, isVisible, payload.SourceID}
 	case "comment":
 		query = `UPDATE comments SET toxicity_score = $1, is_visible = $2 WHERE id = $3`
 		args = []any{payload.ToxicityScore, isVisible, payload.SourceID}

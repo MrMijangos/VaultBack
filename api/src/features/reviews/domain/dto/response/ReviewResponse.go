@@ -11,6 +11,8 @@ type ReviewResponse struct {
 	UserID          string    `json:"user_id"`
 	ProviderID      string    `json:"provider_id"`
 	Content         string    `json:"content"`
+	SentimentScore  *float64  `json:"sentiment_score"`
+	SentimentLabel  *string   `json:"sentiment_label"`
 	IsVisible       bool      `json:"is_visible"`
 	LikesCount      int       `json:"likes_count"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -24,6 +26,8 @@ func FromEntity(r entities.Review) ReviewResponse {
 		UserID:          r.UserID,
 		ProviderID:      r.ProviderID,
 		Content:         r.Content,
+		SentimentScore:  r.SentimentScore,
+		SentimentLabel:  r.SentimentLabel,
 		IsVisible:       r.IsVisible,
 		LikesCount:      r.LikesCount,
 		CreatedAt:       r.CreatedAt,

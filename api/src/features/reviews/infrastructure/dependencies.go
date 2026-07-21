@@ -21,6 +21,12 @@ func BuildGetReviewsByProviderController(pool *pgxpool.Pool) *controllers.GetRev
 	return controllers.NewGetReviewsByProviderController(useCase)
 }
 
+func BuildGetProviderRatingController(pool *pgxpool.Pool) *controllers.GetProviderRatingController {
+	repo := adapters.NewPostgreSQLReviewRepository(pool)
+	useCase := application.NewGetProviderRatingUseCase(repo)
+	return controllers.NewGetProviderRatingController(useCase)
+}
+
 func BuildGetReviewByIdController(pool *pgxpool.Pool) *controllers.GetReviewByIdController {
 	repo := adapters.NewPostgreSQLReviewRepository(pool)
 	useCase := application.NewGetReviewByIdUseCase(repo)
