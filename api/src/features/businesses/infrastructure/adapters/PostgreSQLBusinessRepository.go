@@ -13,7 +13,7 @@ import (
 )
 
 const selectBusinessesQuery = `
-	SELECT id, user_id, name, type, COALESCE(description, ''), COALESCE(location, ''), is_verified, created_at
+	SELECT id, user_id, name, type, COALESCE(description, ''), COALESCE(location, ''), is_verified, created_at, COALESCE(specialties, '{}')
 	FROM businesses
 `
 
@@ -27,17 +27,17 @@ func NewPostgreSQLBusinessRepository(pool *pgxpool.Pool) *PostgreSQLBusinessRepo
 
 func scanBusiness(row pgx.Row) (entities.Business, error) {
 	var b entities.Business
-	err := row.Scan(&b.ID, &b.UserID, &b.Name, &b.Type, &b.Description, &b.Location, &b.IsVerified, &b.CreatedAt)
+	err := row.Scan(&b.ID, &b.UserID, &b.Name, &b.Type, &b.Description, &b.Location, &b.IsVerified, &b.CreatedAt, &b.Specialties)
 	return b, err
 }
 
 func (r *PostgreSQLBusinessRepository) Create(ctx context.Context, business entities.Business) (entities.Business, error) {
 	const query = `
-		INSERT INTO businesses (user_id, name, type, description, location)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO businesses (user_id, name, type, description, location, specialties)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
-	err := r.pool.QueryRow(ctx, query, business.UserID, business.Name, business.Type, business.Description, business.Location).Scan(&business.ID)
+	err := r.pool.QueryRow(ctx, query, business.UserID, business.Name, business.Type, business.Description, business.Location, business.Specialties).Scan(&business.ID)
 	if err != nil {
 		return entities.Business{}, fmt.Errorf("no se pudo crear el negocio: %w", err)
 	}
@@ -86,10 +86,10 @@ func (r *PostgreSQLBusinessRepository) FindByID(ctx context.Context, id string) 
 func (r *PostgreSQLBusinessRepository) Update(ctx context.Context, id string, userID string, business entities.Business) (entities.Business, error) {
 	const query = `
 		UPDATE businesses
-		SET name = $1, type = $2, description = $3, location = $4
-		WHERE id = $5 AND user_id = $6
+		SET name = $1, type = $2, description = $3, location = $4, specialties = $5
+		WHERE id = $6 AND user_id = $7
 	`
-	tag, err := r.pool.Exec(ctx, query, business.Name, business.Type, business.Description, business.Location, id, userID)
+	tag, err := r.pool.Exec(ctx, query, business.Name, business.Type, business.Description, business.Location, business.Specialties, id, userID)
 	if err != nil {
 		return entities.Business{}, fmt.Errorf("no se pudo actualizar el negocio: %w", err)
 	}

@@ -18,6 +18,8 @@ import (
 	blockchaincertificatesRouter "vault/src/features/blockchaincertificates/infrastructure/router"
 	businessesInfra "vault/src/features/businesses/infrastructure"
 	businessesRouter "vault/src/features/businesses/infrastructure/router"
+	businessservicesInfra "vault/src/features/businessservices/infrastructure"
+	businessservicesRouter "vault/src/features/businessservices/infrastructure/router"
 	commentsInfra "vault/src/features/comments/infrastructure"
 	commentsRouter "vault/src/features/comments/infrastructure/router"
 	maintenancelogsInfra "vault/src/features/maintenancelogs/infrastructure"
@@ -107,6 +109,15 @@ func main() {
 		businessesInfra.BuildGetBusinessByIdController(pool),
 		businessesInfra.BuildUpdateBusinessController(pool),
 		businessesInfra.BuildDeleteBusinessController(pool),
+		cfg.JWTSecret,
+	)
+
+	businessservicesRouter.RegisterRoutes(
+		mux,
+		businessservicesInfra.BuildCreateBusinessServiceController(pool),
+		businessservicesInfra.BuildListBusinessServicesController(pool),
+		businessservicesInfra.BuildUpdateBusinessServiceController(pool),
+		businessservicesInfra.BuildDeleteBusinessServiceController(pool),
 		cfg.JWTSecret,
 	)
 

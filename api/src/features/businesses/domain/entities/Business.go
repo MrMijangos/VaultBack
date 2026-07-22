@@ -11,4 +11,5 @@ type Business struct {
 	Location    string
 	IsVerified  bool
 	CreatedAt   time.Time
+	Specialties []string
 }

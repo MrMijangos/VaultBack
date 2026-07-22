@@ -27,6 +27,7 @@ func (uc *UpdateBusinessUseCase) Execute(ctx context.Context, id string, userID 
 		Type:        req.Type,
 		Description: req.Description,
 		Location:    req.Location,
+		Specialties: req.Specialties,
 	})
 	if err != nil {
 		return response.BusinessResponse{}, err

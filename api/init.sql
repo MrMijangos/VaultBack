@@ -28,6 +28,11 @@ CREATE TABLE IF NOT EXISTS assets (
 	CONSTRAINT assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS is_for_sale boolean DEFAULT false;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS sale_price numeric;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS sale_description text;
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS size character varying;
+
 CREATE TABLE IF NOT EXISTS businesses (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NOT NULL UNIQUE,
@@ -39,6 +44,19 @@ CREATE TABLE IF NOT EXISTS businesses (
 	created_at timestamp without time zone DEFAULT now(),
 	CONSTRAINT businesses_pkey PRIMARY KEY (id),
 	CONSTRAINT businesses_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS specialties text[] DEFAULT '{}'::text[];
+
+CREATE TABLE IF NOT EXISTS business_services (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	business_id uuid NOT NULL,
+	title character varying NOT NULL,
+	description text,
+	price numeric NOT NULL,
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT business_services_pkey PRIMARY KEY (id),
+	CONSTRAINT business_services_business_id_fkey FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS asset_photos (

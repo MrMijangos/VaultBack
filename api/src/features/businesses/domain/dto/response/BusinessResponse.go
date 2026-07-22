@@ -17,6 +17,7 @@ type BusinessResponse struct {
 	CreatedAt    time.Time `json:"created_at"`
 	Rating       *float64  `json:"rating"`
 	TotalReviews int       `json:"total_reviews"`
+	Specialties  []string  `json:"specialties"`
 }
 
 func FromEntity(b entities.Business) BusinessResponse {
@@ -29,6 +30,7 @@ func FromEntity(b entities.Business) BusinessResponse {
 		Location:    b.Location,
 		IsVerified:  b.IsVerified,
 		CreatedAt:   b.CreatedAt,
+		Specialties: b.Specialties,
 	}
 }
 

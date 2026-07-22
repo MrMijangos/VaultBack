@@ -36,15 +36,19 @@ func (uc *CreateAssetUseCase) Execute(ctx context.Context, userID string, req re
 	}
 
 	asset := entities.Asset{
-		UserID:        userID,
-		Name:          req.Name,
-		Category:      req.Category,
-		Brand:         req.Brand,
-		PurchaseValue: req.PurchaseValue,
-		Condition:     req.Condition,
-		PurchaseDate:  purchaseDate,
-		StoreOrigin:   req.StoreOrigin,
-		Notes:         req.Notes,
+		UserID:          userID,
+		Name:            req.Name,
+		Category:        req.Category,
+		Brand:           req.Brand,
+		PurchaseValue:   req.PurchaseValue,
+		Condition:       req.Condition,
+		PurchaseDate:    purchaseDate,
+		StoreOrigin:     req.StoreOrigin,
+		Notes:           req.Notes,
+		IsForSale:       req.IsForSale,
+		SalePrice:       req.SalePrice,
+		SaleDescription: req.SaleDescription,
+		Size:            req.Size,
 	}
 
 	created, err := uc.repo.Create(ctx, asset)

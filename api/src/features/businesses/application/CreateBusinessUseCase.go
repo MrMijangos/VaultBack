@@ -36,6 +36,7 @@ func (uc *CreateBusinessUseCase) Execute(ctx context.Context, userID string, req
 		Type:        req.Type,
 		Description: req.Description,
 		Location:    req.Location,
+		Specialties: req.Specialties,
 	})
 	if err != nil {
 		return response.BusinessResponse{}, err

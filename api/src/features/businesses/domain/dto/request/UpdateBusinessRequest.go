@@ -3,10 +3,11 @@ package request
 import "errors"
 
 type UpdateBusinessRequest struct {
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	Location    string `json:"location"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Location    string   `json:"location"`
+	Specialties []string `json:"specialties"`
 }
 
 func (r UpdateBusinessRequest) Validate() error {

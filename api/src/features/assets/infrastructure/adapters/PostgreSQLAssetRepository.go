@@ -15,7 +15,8 @@ import (
 const selectAssetsQuery = `
 	SELECT id, user_id, name, category, COALESCE(brand, ''), purchase_value::float8, condition,
 	       purchase_date, COALESCE(store_origin, ''), COALESCE(notes, ''),
-	       COALESCE(blockchain_tx_id, ''), COALESCE(blockchain_hash, ''), created_at
+	       COALESCE(blockchain_tx_id, ''), COALESCE(blockchain_hash, ''), created_at,
+	       COALESCE(is_for_sale, false), sale_price::float8, COALESCE(sale_description, ''), COALESCE(size, '')
 	FROM assets
 `
 
@@ -32,20 +33,22 @@ func scanAsset(row pgx.Row) (entities.Asset, error) {
 	err := row.Scan(
 		&a.ID, &a.UserID, &a.Name, &a.Category, &a.Brand, &a.PurchaseValue, &a.Condition,
 		&a.PurchaseDate, &a.StoreOrigin, &a.Notes, &a.BlockchainTxID, &a.BlockchainHash, &a.CreatedAt,
+		&a.IsForSale, &a.SalePrice, &a.SaleDescription, &a.Size,
 	)
 	return a, err
 }
 
 func (r *PostgreSQLAssetRepository) Create(ctx context.Context, asset entities.Asset) (entities.Asset, error) {
 	const query = `
-		INSERT INTO assets (user_id, name, category, brand, purchase_value, condition, purchase_date, store_origin, notes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO assets (user_id, name, category, brand, purchase_value, condition, purchase_date, store_origin, notes, is_for_sale, sale_price, sale_description, size)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id
 	`
 
 	err := r.pool.QueryRow(ctx, query,
 		asset.UserID, asset.Name, asset.Category, asset.Brand, asset.PurchaseValue,
 		asset.Condition, asset.PurchaseDate, asset.StoreOrigin, asset.Notes,
+		asset.IsForSale, asset.SalePrice, asset.SaleDescription, asset.Size,
 	).Scan(&asset.ID)
 	if err != nil {
 		return entities.Asset{}, fmt.Errorf("no se pudo crear el producto: %w", err)
@@ -93,13 +96,15 @@ func (r *PostgreSQLAssetRepository) Update(ctx context.Context, id string, userI
 	const query = `
 		UPDATE assets
 		SET name = $1, category = $2, brand = $3, purchase_value = $4,
-		    condition = $5, purchase_date = $6, store_origin = $7, notes = $8
-		WHERE id = $9 AND user_id = $10
+		    condition = $5, purchase_date = $6, store_origin = $7, notes = $8,
+		    is_for_sale = $9, sale_price = $10, sale_description = $11, size = $12
+		WHERE id = $13 AND user_id = $14
 	`
 
 	tag, err := r.pool.Exec(ctx, query,
 		asset.Name, asset.Category, asset.Brand, asset.PurchaseValue,
 		asset.Condition, asset.PurchaseDate, asset.StoreOrigin, asset.Notes,
+		asset.IsForSale, asset.SalePrice, asset.SaleDescription, asset.Size,
 		id, userID,
 	)
 	if err != nil {

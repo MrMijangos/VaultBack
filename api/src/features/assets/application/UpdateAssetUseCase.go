@@ -36,14 +36,18 @@ func (uc *UpdateAssetUseCase) Execute(ctx context.Context, id string, userID str
 	}
 
 	asset := entities.Asset{
-		Name:          req.Name,
-		Category:      req.Category,
-		Brand:         req.Brand,
-		PurchaseValue: req.PurchaseValue,
-		Condition:     req.Condition,
-		PurchaseDate:  purchaseDate,
-		StoreOrigin:   req.StoreOrigin,
-		Notes:         req.Notes,
+		Name:            req.Name,
+		Category:        req.Category,
+		Brand:           req.Brand,
+		PurchaseValue:   req.PurchaseValue,
+		Condition:       req.Condition,
+		PurchaseDate:    purchaseDate,
+		StoreOrigin:     req.StoreOrigin,
+		Notes:           req.Notes,
+		IsForSale:       req.IsForSale,
+		SalePrice:       req.SalePrice,
+		SaleDescription: req.SaleDescription,
+		Size:            req.Size,
 	}
 
 	updated, err := uc.repo.Update(ctx, id, userID, asset)
