@@ -10,6 +10,12 @@ type Config struct {
 	StripePriceBasico   string
 	StripePricePro      string
 	StripePricePremium  string
+	DBHost              string
+	DBPort              string
+	DBUser              string
+	DBPassword          string
+	DBName              string
+	DBSSL               string
 }
 
 // StripeConfigured indica si hay claves reales de Stripe cargadas. Mientras

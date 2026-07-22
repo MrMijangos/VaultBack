@@ -32,13 +32,23 @@ func main() {
 		log.Fatalf("configuracion invalida: %v", err)
 	}
 
-	// Sin base de datos propia todavía (se agrega al final, ver spec de
-	// suscripciones sección 2) -- todos los repos son en memoria por ahora.
+	pool, err := config.NewPoolConnection(cfg)
+	if err != nil {
+		log.Fatalf("error de conexion a base de datos: %v", err)
+	}
+	defer pool.Close()
+
+	if err := config.RunMigrations(pool); err != nil {
+		log.Fatalf("error al migrar el esquema: %v", err)
+	}
+
+	// planRepo se queda en memoria: son 3 planes fijos hardcodeados, no hace
+	// falta tabla. El resto ya persiste en Postgres (mismo que usa api/).
 	planRepo := subscriptionsAdapters.NewInMemoryPlanRepository(cfg)
-	subscriptionRepo := subscriptionsAdapters.NewInMemorySubscriptionRepository()
-	adRepo := adsAdapters.NewInMemoryAdRepository()
-	connectedAccountRepo := connectAdapters.NewInMemoryConnectedAccountRepository()
-	orderRepo := ordersAdapters.NewInMemoryOrderRepository()
+	subscriptionRepo := subscriptionsAdapters.NewPostgreSQLSubscriptionRepository(pool)
+	adRepo := adsAdapters.NewPostgreSQLAdRepository(pool)
+	connectedAccountRepo := connectAdapters.NewPostgreSQLConnectedAccountRepository(pool)
+	orderRepo := ordersAdapters.NewPostgreSQLOrderRepository(pool)
 
 	adDeactivator := adsAdapters.NewAdDeactivator(adRepo)
 	subscriptionInfoProvider := subscriptionsAdapters.NewSubscriptionInfoAdapter(subscriptionRepo, planRepo)
