@@ -266,6 +266,12 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 	CONSTRAINT chat_messages_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- La llave AES de cada mensaje se cifra dos veces: una con la pública del
+-- receptor (encrypted_aes_key, arriba) y otra con la pública del propio
+-- emisor -- sin esto, quien envía un mensaje jamás podría releerlo despues
+-- (su privada no destraba una llave cifrada para la pública ajena).
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encrypted_aes_key_sender text;
+
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
 	ON chat_messages (LEAST(sender_id, recipient_id), GREATEST(sender_id, recipient_id), created_at);
 

@@ -9,7 +9,10 @@ type SendChatMessageRequest struct {
 	RecipientID     string `json:"recipient_id"`
 	CipherText      string `json:"cipher_text"`
 	EncryptedAESKey string `json:"encrypted_aes_key"`
-	IV              string `json:"iv"`
+	// EncryptedAESKeySender: la misma llave AES cifrada tambien con la
+	// publica del emisor, para que pueda releer su propio mensaje despues.
+	EncryptedAESKeySender string `json:"encrypted_aes_key_sender"`
+	IV                    string `json:"iv"`
 }
 
 func (r SendChatMessageRequest) Validate() error {
@@ -20,7 +23,10 @@ func (r SendChatMessageRequest) Validate() error {
 		return errors.New("el texto cifrado es obligatorio")
 	}
 	if r.EncryptedAESKey == "" {
-		return errors.New("la llave cifrada es obligatoria")
+		return errors.New("la llave cifrada para el destinatario es obligatoria")
+	}
+	if r.EncryptedAESKeySender == "" {
+		return errors.New("la llave cifrada para el emisor es obligatoria")
 	}
 	if r.IV == "" {
 		return errors.New("el vector de inicializacion es obligatorio")

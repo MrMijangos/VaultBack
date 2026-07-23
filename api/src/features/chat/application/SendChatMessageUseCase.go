@@ -26,12 +26,13 @@ func (uc *SendChatMessageUseCase) Execute(ctx context.Context, senderID string, 
 	}
 
 	created, err := uc.repo.Create(ctx, entities.ChatMessage{
-		SenderID:        senderID,
-		RecipientID:     req.RecipientID,
-		CipherText:      req.CipherText,
-		EncryptedAESKey: req.EncryptedAESKey,
-		IV:              req.IV,
-		Status:          "sent",
+		SenderID:              senderID,
+		RecipientID:           req.RecipientID,
+		CipherText:            req.CipherText,
+		EncryptedAESKey:       req.EncryptedAESKey,
+		EncryptedAESKeySender: req.EncryptedAESKeySender,
+		IV:                    req.IV,
+		Status:                "sent",
 	})
 	if err != nil {
 		return response.ChatMessageResponse{}, err

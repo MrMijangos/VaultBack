@@ -4,6 +4,7 @@ export interface ChatMessage {
   recipientId: string;
   cipherText: string;
   encryptedAesKey: string;
+  encryptedAesKeySender: string;
   iv: string;
   status: string;
   createdAt: string;

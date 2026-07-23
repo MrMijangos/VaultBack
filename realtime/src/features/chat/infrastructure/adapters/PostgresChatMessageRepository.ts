@@ -12,6 +12,7 @@ interface ChatMessageRow {
   recipient_id: string;
   cipher_text: string;
   encrypted_aes_key: string;
+  encrypted_aes_key_sender: string;
   iv: string;
   status: string;
   created_at: string;
@@ -24,6 +25,7 @@ function toChatMessage(row: ChatMessageRow): ChatMessage {
     recipientId: row.recipient_id,
     cipherText: row.cipher_text,
     encryptedAesKey: row.encrypted_aes_key,
+    encryptedAesKeySender: row.encrypted_aes_key_sender,
     iv: row.iv,
     status: row.status,
     createdAt: row.created_at,

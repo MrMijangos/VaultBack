@@ -13,7 +13,8 @@ import (
 )
 
 const selectChatMessagesQuery = `
-	SELECT id, sender_id, recipient_id, cipher_text, encrypted_aes_key, iv, status, created_at
+	SELECT id, sender_id, recipient_id, cipher_text, encrypted_aes_key,
+	       COALESCE(encrypted_aes_key_sender, ''), iv, status, created_at
 	FROM chat_messages
 `
 
@@ -28,19 +29,22 @@ func NewPostgreSQLChatMessageRepository(pool *pgxpool.Pool) *PostgreSQLChatMessa
 func scanChatMessage(row pgx.Row) (entities.ChatMessage, error) {
 	var m entities.ChatMessage
 	err := row.Scan(
-		&m.ID, &m.SenderID, &m.RecipientID, &m.CipherText, &m.EncryptedAESKey, &m.IV, &m.Status, &m.CreatedAt,
+		&m.ID, &m.SenderID, &m.RecipientID, &m.CipherText, &m.EncryptedAESKey,
+		&m.EncryptedAESKeySender, &m.IV, &m.Status, &m.CreatedAt,
 	)
 	return m, err
 }
 
 func (r *PostgreSQLChatMessageRepository) Create(ctx context.Context, message entities.ChatMessage) (entities.ChatMessage, error) {
 	const query = `
-		INSERT INTO chat_messages (sender_id, recipient_id, cipher_text, encrypted_aes_key, iv, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, sender_id, recipient_id, cipher_text, encrypted_aes_key, iv, status, created_at
+		INSERT INTO chat_messages (sender_id, recipient_id, cipher_text, encrypted_aes_key, encrypted_aes_key_sender, iv, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, sender_id, recipient_id, cipher_text, encrypted_aes_key,
+		          COALESCE(encrypted_aes_key_sender, ''), iv, status, created_at
 	`
 	row := r.pool.QueryRow(ctx, query,
-		message.SenderID, message.RecipientID, message.CipherText, message.EncryptedAESKey, message.IV, message.Status,
+		message.SenderID, message.RecipientID, message.CipherText, message.EncryptedAESKey,
+		message.EncryptedAESKeySender, message.IV, message.Status,
 	)
 	created, err := scanChatMessage(row)
 	if err != nil {
