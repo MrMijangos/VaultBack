@@ -123,6 +123,29 @@ func (r *PostgreSQLUserRepository) UpdateImage(ctx context.Context, id string, i
 	return r.FindByID(ctx, id)
 }
 
+func (r *PostgreSQLUserRepository) SetPublicKey(ctx context.Context, id string, publicKey string) error {
+	tag, err := r.pool.Exec(ctx, `UPDATE users SET public_key = $1 WHERE id = $2`, publicKey, id)
+	if err != nil {
+		return fmt.Errorf("no se pudo guardar la llave publica: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return repositories.ErrUserNotFound
+	}
+	return nil
+}
+
+func (r *PostgreSQLUserRepository) GetPublicKey(ctx context.Context, id string) (*string, error) {
+	var publicKey *string
+	err := r.pool.QueryRow(ctx, `SELECT public_key FROM users WHERE id = $1`, id).Scan(&publicKey)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, repositories.ErrUserNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo obtener la llave publica: %w", err)
+	}
+	return publicKey, nil
+}
+
 func (r *PostgreSQLUserRepository) Delete(ctx context.Context, id string) error {
 	const query = `DELETE FROM users WHERE id = $1`
 

@@ -2,8 +2,8 @@ import { Server as HTTPServer, IncomingMessage } from "http";
 import { URL } from "url";
 import { WebSocketServer } from "ws";
 
-import { verifyToken } from "../../../../core/security/JWT";
-import { ConnectionRegistry } from "../../domain/repositories/ConnectionRegistry";
+import { verifyToken } from "../security/JWT";
+import { ConnectionRegistry } from "./ConnectionRegistry";
 
 function extractToken(request: IncomingMessage): string | null {
   const url = new URL(request.url ?? "", "http://localhost");
@@ -21,7 +21,7 @@ function extractToken(request: IncomingMessage): string | null {
   return match ? decodeURIComponent(match.split("=")[1]) : null;
 }
 
-export class NotificationWebSocketServer {
+export class AuthenticatedWebSocketServer {
   private readonly wss: WebSocketServer;
 
   constructor(

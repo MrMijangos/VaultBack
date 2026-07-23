@@ -1,4 +1,4 @@
-import { ConnectionRegistry } from "../domain/repositories/ConnectionRegistry";
+import { ConnectionRegistry } from "../../../core/websocket/ConnectionRegistry";
 import { NotificationRepository } from "../domain/repositories/NotificationRepository";
 
 export class BroadcastNotificationUseCase {
@@ -9,7 +9,7 @@ export class BroadcastNotificationUseCase {
 
   async execute(): Promise<void> {
     await this.notificationRepository.onNewNotification((notification) => {
-      this.connectionRegistry.sendToUser(notification.userId, notification);
+      this.connectionRegistry.sendToUser(notification.userId, { event: "notification", ...notification });
     });
   }
 }

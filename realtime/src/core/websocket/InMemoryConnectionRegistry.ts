@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 
-import { ConnectionRegistry } from "../../domain/repositories/ConnectionRegistry";
+import { ConnectionRegistry } from "./ConnectionRegistry";
 
 export class InMemoryConnectionRegistry implements ConnectionRegistry {
   private connectionsByUser: Map<string, Set<WebSocket>> = new Map();

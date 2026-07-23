@@ -20,4 +20,6 @@ type Asset struct {
 	SalePrice       *float64
 	SaleDescription string
 	Size            string
+	SellerName      string
+	SellerAvatarURL string
 }

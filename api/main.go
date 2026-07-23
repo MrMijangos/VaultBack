@@ -10,6 +10,10 @@ import (
 	"vault/src/core/eventbus"
 	"vault/src/core/middleware"
 	"vault/src/core/moderation"
+	addressesInfra "vault/src/features/addresses/infrastructure"
+	addressesRouter "vault/src/features/addresses/infrastructure/router"
+	assetcommentsInfra "vault/src/features/assetcomments/infrastructure"
+	assetcommentsRouter "vault/src/features/assetcomments/infrastructure/router"
 	assetsInfra "vault/src/features/assets/infrastructure"
 	assetsRouter "vault/src/features/assets/infrastructure/router"
 	authInfra "vault/src/features/auth/infrastructure"
@@ -20,6 +24,8 @@ import (
 	businessesRouter "vault/src/features/businesses/infrastructure/router"
 	businessservicesInfra "vault/src/features/businessservices/infrastructure"
 	businessservicesRouter "vault/src/features/businessservices/infrastructure/router"
+	chatInfra "vault/src/features/chat/infrastructure"
+	chatRouter "vault/src/features/chat/infrastructure/router"
 	commentsInfra "vault/src/features/comments/infrastructure"
 	commentsRouter "vault/src/features/comments/infrastructure/router"
 	maintenancelogsInfra "vault/src/features/maintenancelogs/infrastructure"
@@ -28,6 +34,8 @@ import (
 	notificationsRouter "vault/src/features/notifications/infrastructure/router"
 	postsInfra "vault/src/features/posts/infrastructure"
 	postsRouter "vault/src/features/posts/infrastructure/router"
+	restorerprofilesInfra "vault/src/features/restorerprofiles/infrastructure"
+	restorerprofilesRouter "vault/src/features/restorerprofiles/infrastructure/router"
 	reviewsInfra "vault/src/features/reviews/infrastructure"
 	reviewsRouter "vault/src/features/reviews/infrastructure/router"
 	usersInfra "vault/src/features/users/infrastructure"
@@ -86,10 +94,21 @@ func main() {
 		usersInfra.BuildUpdateUserController(pool),
 		usersInfra.BuildDeleteUserController(pool),
 		usersInfra.BuildUploadUserImageController(pool, imageUploader),
+		usersInfra.BuildSetPublicKeyController(pool),
+		usersInfra.BuildGetPublicKeyController(pool),
 		cfg.JWTSecret,
 	)
 
 	authRouter.RegisterRoutes(mux, authInfra.BuildLoginController(pool, cfg.JWTSecret, cfg.CookieSecure))
+
+	addressesRouter.RegisterRoutes(
+		mux,
+		addressesInfra.BuildCreateAddressController(pool),
+		addressesInfra.BuildListAddressesController(pool),
+		addressesInfra.BuildDeleteAddressController(pool),
+		addressesInfra.BuildSetDefaultAddressController(pool),
+		cfg.JWTSecret,
+	)
 
 	assetsRouter.RegisterRoutes(
 		mux,
@@ -99,6 +118,14 @@ func main() {
 		assetsInfra.BuildUpdateAssetController(pool, publisher),
 		assetsInfra.BuildDeleteAssetController(pool),
 		assetsInfra.BuildUploadAssetPhotoController(pool, imageUploader),
+		cfg.JWTSecret,
+	)
+
+	assetcommentsRouter.RegisterRoutes(
+		mux,
+		assetcommentsInfra.BuildCreateAssetCommentController(pool, moderationClient),
+		assetcommentsInfra.BuildGetAssetCommentsController(pool),
+		assetcommentsInfra.BuildDeleteAssetCommentController(pool),
 		cfg.JWTSecret,
 	)
 
@@ -172,6 +199,22 @@ func main() {
 		reviewsInfra.BuildDeleteReviewController(pool),
 		reviewsInfra.BuildLikeReviewController(pool),
 		reviewsInfra.BuildUnlikeReviewController(pool),
+		cfg.JWTSecret,
+	)
+
+	restorerprofilesRouter.RegisterRoutes(
+		mux,
+		restorerprofilesInfra.BuildUpsertRestorerProfileController(pool),
+		restorerprofilesInfra.BuildGetRestorerProfileController(pool),
+		restorerprofilesInfra.BuildListRestorerProfilesController(pool),
+		cfg.JWTSecret,
+	)
+
+	chatRouter.RegisterRoutes(
+		mux,
+		chatInfra.BuildSendChatMessageController(pool),
+		chatInfra.BuildGetConversationMessagesController(pool),
+		chatInfra.BuildUpdateChatMessageStatusController(pool),
 		cfg.JWTSecret,
 	)
 

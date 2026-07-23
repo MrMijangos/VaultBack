@@ -17,4 +17,8 @@ type UserRepository interface {
 	Update(ctx context.Context, id string, user entities.User) (entities.User, error)
 	UpdateImage(ctx context.Context, id string, imageURL string) (entities.User, error)
 	Delete(ctx context.Context, id string) error
+	SetPublicKey(ctx context.Context, id string, publicKey string) error
+	// GetPublicKey usa una consulta angosta (no reutiliza FindByID) para no
+	// traer el hash de la contraseña en una ruta publica.
+	GetPublicKey(ctx context.Context, id string) (*string, error)
 }

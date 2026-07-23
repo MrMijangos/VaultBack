@@ -32,6 +32,8 @@ type AssetResponse struct {
 	SalePrice       *float64             `json:"sale_price"`
 	SaleDescription string               `json:"sale_description"`
 	Size            string               `json:"size"`
+	SellerName      string               `json:"seller_name"`
+	SellerAvatarURL string               `json:"seller_avatar_url"`
 }
 
 func FromEntity(asset entities.Asset, photos []entities.AssetPhoto) AssetResponse {
@@ -70,6 +72,8 @@ func FromEntity(asset entities.Asset, photos []entities.AssetPhoto) AssetRespons
 		SalePrice:       asset.SalePrice,
 		SaleDescription: asset.SaleDescription,
 		Size:            asset.Size,
+		SellerName:      asset.SellerName,
+		SellerAvatarURL: asset.SellerAvatarURL,
 	}
 }
 

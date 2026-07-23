@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
 	CONSTRAINT users_pkey PRIMARY KEY (id)
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS public_key text;
+
 CREATE TABLE IF NOT EXISTS assets (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NOT NULL,
@@ -57,6 +59,28 @@ CREATE TABLE IF NOT EXISTS business_services (
 	created_at timestamp without time zone DEFAULT now(),
 	CONSTRAINT business_services_pkey PRIMARY KEY (id),
 	CONSTRAINT business_services_business_id_fkey FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS restorer_profiles (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	user_id uuid NOT NULL UNIQUE,
+	bio text,
+	specialties text[] DEFAULT '{}'::text[],
+	created_at timestamp without time zone DEFAULT now(),
+	updated_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT restorer_profiles_pkey PRIMARY KEY (id),
+	CONSTRAINT restorer_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS restorer_services (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	user_id uuid NOT NULL,
+	title character varying NOT NULL,
+	description text,
+	price numeric NOT NULL,
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT restorer_services_pkey PRIMARY KEY (id),
+	CONSTRAINT restorer_services_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS asset_photos (
@@ -142,6 +166,19 @@ CREATE TABLE IF NOT EXISTS comments (
 	CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS asset_comments (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	asset_id uuid NOT NULL,
+	user_id uuid NOT NULL,
+	content text NOT NULL,
+	toxicity_score double precision,
+	is_visible boolean DEFAULT true,
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT asset_comments_pkey PRIMARY KEY (id),
+	CONSTRAINT asset_comments_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+	CONSTRAINT asset_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NOT NULL,
@@ -197,6 +234,52 @@ DROP TRIGGER IF EXISTS notifications_notify_trigger ON notifications;
 CREATE TRIGGER notifications_notify_trigger
 	AFTER INSERT ON notifications
 	FOR EACH ROW EXECUTE FUNCTION notify_new_notification();
+
+CREATE TABLE IF NOT EXISTS addresses (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	user_id uuid NOT NULL,
+	label character varying NOT NULL,
+	recipient character varying NOT NULL,
+	phone character varying NOT NULL,
+	street character varying NOT NULL,
+	city character varying NOT NULL,
+	state character varying NOT NULL,
+	postal_code character varying NOT NULL,
+	reference_notes text,
+	is_default boolean NOT NULL DEFAULT false,
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT addresses_pkey PRIMARY KEY (id),
+	CONSTRAINT addresses_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	sender_id uuid NOT NULL,
+	recipient_id uuid NOT NULL,
+	cipher_text text NOT NULL,
+	encrypted_aes_key text NOT NULL,
+	iv text NOT NULL,
+	status character varying NOT NULL DEFAULT 'sent'::character varying CHECK (status::text = ANY (ARRAY['sent'::character varying, 'delivered'::character varying, 'read'::character varying]::text[])),
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
+	CONSTRAINT chat_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+	CONSTRAINT chat_messages_recipient_id_fkey FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
+	ON chat_messages (LEAST(sender_id, recipient_id), GREATEST(sender_id, recipient_id), created_at);
+
+CREATE OR REPLACE FUNCTION notify_new_chat_message() RETURNS trigger AS $$
+BEGIN
+	PERFORM pg_notify('new_chat_message', row_to_json(NEW)::text);
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS chat_messages_notify_trigger ON chat_messages;
+CREATE TRIGGER chat_messages_notify_trigger
+	AFTER INSERT ON chat_messages
+	FOR EACH ROW EXECUTE FUNCTION notify_new_chat_message();
 
 CREATE TABLE IF NOT EXISTS blockchain_certificates (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),

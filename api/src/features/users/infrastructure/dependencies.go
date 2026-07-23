@@ -44,3 +44,15 @@ func BuildUploadUserImageController(pool *pgxpool.Pool, uploader *cloudinary.Ima
 	useCase := application.NewUploadUserImageUseCase(repo, uploader)
 	return controllers.NewUploadUserImageController(useCase)
 }
+
+func BuildSetPublicKeyController(pool *pgxpool.Pool) *controllers.SetPublicKeyController {
+	repo := adapters.NewPostgreSQLUserRepository(pool)
+	useCase := application.NewSetPublicKeyUseCase(repo)
+	return controllers.NewSetPublicKeyController(useCase)
+}
+
+func BuildGetPublicKeyController(pool *pgxpool.Pool) *controllers.GetPublicKeyController {
+	repo := adapters.NewPostgreSQLUserRepository(pool)
+	useCase := application.NewGetPublicKeyUseCase(repo)
+	return controllers.NewGetPublicKeyController(useCase)
+}

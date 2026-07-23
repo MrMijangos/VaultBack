@@ -13,11 +13,13 @@ import (
 )
 
 const selectAssetsQuery = `
-	SELECT id, user_id, name, category, COALESCE(brand, ''), purchase_value::float8, condition,
-	       purchase_date, COALESCE(store_origin, ''), COALESCE(notes, ''),
-	       COALESCE(blockchain_tx_id, ''), COALESCE(blockchain_hash, ''), created_at,
-	       COALESCE(is_for_sale, false), sale_price::float8, COALESCE(sale_description, ''), COALESCE(size, '')
-	FROM assets
+	SELECT a.id, a.user_id, a.name, a.category, COALESCE(a.brand, ''), a.purchase_value::float8, a.condition,
+	       a.purchase_date, COALESCE(a.store_origin, ''), COALESCE(a.notes, ''),
+	       COALESCE(a.blockchain_tx_id, ''), COALESCE(a.blockchain_hash, ''), a.created_at,
+	       COALESCE(a.is_for_sale, false), a.sale_price::float8, COALESCE(a.sale_description, ''), COALESCE(a.size, ''),
+	       u.name, COALESCE(u.avatar_url, '')
+	FROM assets a
+	JOIN users u ON u.id = a.user_id
 `
 
 type PostgreSQLAssetRepository struct {
@@ -34,6 +36,7 @@ func scanAsset(row pgx.Row) (entities.Asset, error) {
 		&a.ID, &a.UserID, &a.Name, &a.Category, &a.Brand, &a.PurchaseValue, &a.Condition,
 		&a.PurchaseDate, &a.StoreOrigin, &a.Notes, &a.BlockchainTxID, &a.BlockchainHash, &a.CreatedAt,
 		&a.IsForSale, &a.SalePrice, &a.SaleDescription, &a.Size,
+		&a.SellerName, &a.SellerAvatarURL,
 	)
 	return a, err
 }
@@ -58,7 +61,7 @@ func (r *PostgreSQLAssetRepository) Create(ctx context.Context, asset entities.A
 }
 
 func (r *PostgreSQLAssetRepository) FindAll(ctx context.Context) ([]entities.Asset, error) {
-	rows, err := r.pool.Query(ctx, selectAssetsQuery+" ORDER BY created_at DESC")
+	rows, err := r.pool.Query(ctx, selectAssetsQuery+" ORDER BY a.created_at DESC")
 	if err != nil {
 		return nil, fmt.Errorf("no se pudieron listar los productos: %w", err)
 	}
@@ -80,7 +83,7 @@ func (r *PostgreSQLAssetRepository) FindAll(ctx context.Context) ([]entities.Ass
 }
 
 func (r *PostgreSQLAssetRepository) FindByID(ctx context.Context, id string) (entities.Asset, error) {
-	row := r.pool.QueryRow(ctx, selectAssetsQuery+" WHERE id = $1", id)
+	row := r.pool.QueryRow(ctx, selectAssetsQuery+" WHERE a.id = $1", id)
 	a, err := scanAsset(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return entities.Asset{}, repositories.ErrAssetNotFound

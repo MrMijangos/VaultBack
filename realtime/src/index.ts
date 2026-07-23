@@ -1,6 +1,9 @@
 import { createServer } from "http";
 
 import { loadConfig } from "./core/config/LoadConfig";
+import { AuthenticatedWebSocketServer } from "./core/websocket/AuthenticatedWebSocketServer";
+import { InMemoryConnectionRegistry } from "./core/websocket/InMemoryConnectionRegistry";
+import { buildBroadcastChatMessageUseCase } from "./features/chat/infrastructure/Dependencies";
 import { buildBroadcastNotificationUseCase } from "./features/notifications/infrastructure/Dependencies";
 
 async function main(): Promise<void> {
@@ -11,8 +14,14 @@ async function main(): Promise<void> {
     res.end("vault-realtime up");
   });
 
-  const broadcastNotifications = buildBroadcastNotificationUseCase(httpServer, config);
+  const connectionRegistry = new InMemoryConnectionRegistry();
+  new AuthenticatedWebSocketServer(httpServer, connectionRegistry, config.jwtSecret);
+
+  const broadcastNotifications = buildBroadcastNotificationUseCase(connectionRegistry, config);
   await broadcastNotifications.execute();
+
+  const broadcastChatMessages = buildBroadcastChatMessageUseCase(connectionRegistry, config);
+  await broadcastChatMessages.execute();
 
   httpServer.listen(config.port, () => {
     console.log(`vault-realtime escuchando en el puerto ${config.port}`);
