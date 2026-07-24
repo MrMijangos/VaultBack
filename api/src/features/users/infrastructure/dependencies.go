@@ -56,3 +56,9 @@ func BuildGetPublicKeyController(pool *pgxpool.Pool) *controllers.GetPublicKeyCo
 	useCase := application.NewGetPublicKeyUseCase(repo)
 	return controllers.NewGetPublicKeyController(useCase)
 }
+
+func BuildAddRolesController(pool *pgxpool.Pool) *controllers.AddRolesController {
+	repo := adapters.NewPostgreSQLUserRepository(pool)
+	useCase := application.NewAddRolesUseCase(repo)
+	return controllers.NewAddRolesController(useCase)
+}

@@ -21,4 +21,7 @@ type UserRepository interface {
 	// GetPublicKey usa una consulta angosta (no reutiliza FindByID) para no
 	// traer el hash de la contraseña en una ruta publica.
 	GetPublicKey(ctx context.Context, id string) (*string, error)
+	// AddRoles agrega roles al historico acumulado sin duplicar (dedup vía
+	// SQL) y sin tocar los que ya tenia la cuenta.
+	AddRoles(ctx context.Context, id string, roles []string) (entities.User, error)
 }

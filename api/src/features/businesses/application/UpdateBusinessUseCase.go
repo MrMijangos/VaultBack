@@ -24,7 +24,7 @@ func (uc *UpdateBusinessUseCase) Execute(ctx context.Context, id string, userID 
 
 	updated, err := uc.repo.Update(ctx, id, userID, entities.Business{
 		Name:        req.Name,
-		Type:        req.Type,
+		Types:       req.Types,
 		Description: req.Description,
 		Location:    req.Location,
 		Specialties: req.Specialties,

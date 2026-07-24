@@ -96,6 +96,7 @@ func main() {
 		usersInfra.BuildUploadUserImageController(pool, imageUploader),
 		usersInfra.BuildSetPublicKeyController(pool),
 		usersInfra.BuildGetPublicKeyController(pool),
+		usersInfra.BuildAddRolesController(pool),
 		cfg.JWTSecret,
 	)
 

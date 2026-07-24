@@ -33,7 +33,7 @@ func (uc *CreateBusinessUseCase) Execute(ctx context.Context, userID string, req
 	created, err := uc.repo.Create(ctx, entities.Business{
 		UserID:      userID,
 		Name:        req.Name,
-		Type:        req.Type,
+		Types:       req.Types,
 		Description: req.Description,
 		Location:    req.Location,
 		Specialties: req.Specialties,

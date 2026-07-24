@@ -13,7 +13,7 @@ import (
 )
 
 const selectUsersQuery = `
-	SELECT id, name, email, password, COALESCE(avatar_url, ''), role, created_at, updated_at
+	SELECT id, name, email, password, COALESCE(avatar_url, ''), role, created_at, updated_at, COALESCE(roles, '{}')
 	FROM users
 `
 
@@ -27,13 +27,13 @@ func NewPostgreSQLUserRepository(pool *pgxpool.Pool) *PostgreSQLUserRepository {
 
 func (r *PostgreSQLUserRepository) Create(ctx context.Context, user entities.User) (entities.User, error) {
 	const query = `
-		INSERT INTO users (name, email, password, avatar_url, role)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users (name, email, password, avatar_url, role, roles)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
 	err := r.pool.QueryRow(ctx, query,
-		user.Name, user.Email, user.PasswordHash, user.AvatarURL, user.Role,
+		user.Name, user.Email, user.PasswordHash, user.AvatarURL, user.Role, user.Roles,
 	).Scan(&user.ID)
 	if err != nil {
 		return entities.User{}, fmt.Errorf("no se pudo crear el usuario: %w", err)
@@ -63,7 +63,7 @@ func (r *PostgreSQLUserRepository) FindAll(ctx context.Context) ([]entities.User
 	for rows.Next() {
 		var u entities.User
 		if err := rows.Scan(
-			&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+			&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt, &u.Roles,
 		); err != nil {
 			return nil, fmt.Errorf("no se pudo leer el usuario: %w", err)
 		}
@@ -79,7 +79,7 @@ func (r *PostgreSQLUserRepository) FindAll(ctx context.Context) ([]entities.User
 func (r *PostgreSQLUserRepository) FindByID(ctx context.Context, id string) (entities.User, error) {
 	var u entities.User
 	err := r.pool.QueryRow(ctx, selectUsersQuery+" WHERE id = $1", id).Scan(
-		&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.AvatarURL, &u.Role, &u.CreatedAt, &u.UpdatedAt, &u.Roles,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return entities.User{}, repositories.ErrUserNotFound
@@ -144,6 +144,24 @@ func (r *PostgreSQLUserRepository) GetPublicKey(ctx context.Context, id string) 
 		return nil, fmt.Errorf("no se pudo obtener la llave publica: %w", err)
 	}
 	return publicKey, nil
+}
+
+func (r *PostgreSQLUserRepository) AddRoles(ctx context.Context, id string, roles []string) (entities.User, error) {
+	const query = `
+		UPDATE users
+		SET roles = (SELECT ARRAY(SELECT DISTINCT unnest(roles || $2::text[])))
+		WHERE id = $1
+	`
+
+	tag, err := r.pool.Exec(ctx, query, id, roles)
+	if err != nil {
+		return entities.User{}, fmt.Errorf("no se pudieron agregar los roles: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return entities.User{}, repositories.ErrUserNotFound
+	}
+
+	return r.FindByID(ctx, id)
 }
 
 func (r *PostgreSQLUserRepository) Delete(ctx context.Context, id string) error {

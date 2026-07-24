@@ -6,7 +6,7 @@ type Business struct {
 	ID          string
 	UserID      string
 	Name        string
-	Type        string
+	Types       []string
 	Description string
 	Location    string
 	IsVerified  bool

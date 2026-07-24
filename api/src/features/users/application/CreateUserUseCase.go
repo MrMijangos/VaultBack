@@ -46,6 +46,7 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, req request.CreateUser
 		PasswordHash: hash,
 		AvatarURL:    req.AvatarURL,
 		Role:         req.Role,
+		Roles:        []string{req.Role},
 	}
 
 	created, err := uc.repo.Create(ctx, user)

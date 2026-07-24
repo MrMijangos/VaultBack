@@ -10,7 +10,7 @@ type BusinessResponse struct {
 	ID           string    `json:"id"`
 	UserID       string    `json:"user_id"`
 	Name         string    `json:"name"`
-	Type         string    `json:"type"`
+	Types        []string  `json:"types"`
 	Description  string    `json:"description"`
 	Location     string    `json:"location"`
 	IsVerified   bool      `json:"is_verified"`
@@ -25,7 +25,7 @@ func FromEntity(b entities.Business) BusinessResponse {
 		ID:          b.ID,
 		UserID:      b.UserID,
 		Name:        b.Name,
-		Type:        b.Type,
+		Types:       b.Types,
 		Description: b.Description,
 		Location:    b.Location,
 		IsVerified:  b.IsVerified,

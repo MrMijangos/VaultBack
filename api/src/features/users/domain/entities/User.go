@@ -12,4 +12,8 @@ type User struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	PublicKey    *string
+	// Roles es el historico acumulado de roles que la cuenta ha adquirido
+	// (nunca se quita nada, solo se agrega) -- a diferencia de Role, que es
+	// el mas reciente/principal.
+	Roles []string
 }

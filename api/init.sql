@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS public_key text;
 
+-- roles es el historico acumulado (nunca se quita nada, solo se agrega) --
+-- a diferencia de `role`, que sigue siendo el rol "principal/mas reciente"
+-- y no se toca para no romper nada que ya lo lea. El backfill solo corre
+-- sobre cuentas que todavia no tienen nada acumulado.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS roles text[] DEFAULT '{}'::text[];
+UPDATE users SET roles = ARRAY[role] WHERE roles = '{}'::text[];
+
 CREATE TABLE IF NOT EXISTS assets (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NOT NULL,
@@ -49,6 +56,13 @@ CREATE TABLE IF NOT EXISTS businesses (
 );
 
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS specialties text[] DEFAULT '{}'::text[];
+
+-- types reemplaza `type` (permite elegir mas de una categoria a la vez,
+-- p.ej. un negocio que hace mantenimiento Y reparacion). Se deja `type` en
+-- la tabla sin usarlo -- evita el riesgo de un DROP COLUMN que nadie pidio.
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS types text[] DEFAULT '{}'::text[];
+ALTER TABLE businesses ALTER COLUMN type DROP NOT NULL;
+UPDATE businesses SET types = ARRAY[type] WHERE types = '{}'::text[] AND type IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS business_services (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),

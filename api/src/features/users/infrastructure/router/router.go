@@ -17,6 +17,7 @@ func RegisterRoutes(
 	uploadUserImage *controllers.UploadUserImageController,
 	setPublicKey *controllers.SetPublicKeyController,
 	getPublicKey *controllers.GetPublicKeyController,
+	addRoles *controllers.AddRolesController,
 	jwtSecret string,
 ) {
 	auth := security.RequireAuth(jwtSecret)
@@ -29,4 +30,5 @@ func RegisterRoutes(
 	mux.Handle("PUT /api/v1/users/{id}/image", auth(http.HandlerFunc(uploadUserImage.Handle)))
 	mux.Handle("POST /api/v1/users/{id}/public-key", auth(http.HandlerFunc(setPublicKey.Handle)))
 	mux.HandleFunc("GET /api/v1/users/{id}/public-key", getPublicKey.Handle)
+	mux.Handle("POST /api/v1/users/{id}/roles", auth(http.HandlerFunc(addRoles.Handle)))
 }
