@@ -13,3 +13,10 @@ func BuildLoginController(pool *pgxpool.Pool, jwtSecret string, cookieSecure boo
 	useCase := application.NewLoginUseCase(repo, jwtSecret)
 	return controllers.NewLoginController(useCase, cookieSecure)
 }
+
+func BuildGoogleLoginController(pool *pgxpool.Pool, googleClientIDs string, jwtSecret string, cookieSecure bool) *controllers.GoogleLoginController {
+	repo := adapters.NewPostgreSQLAuthRepository(pool)
+	verifier := adapters.NewGoogleTokenVerifier(googleClientIDs)
+	useCase := application.NewGoogleLoginUseCase(repo, verifier, jwtSecret)
+	return controllers.NewGoogleLoginController(useCase, cookieSecure)
+}

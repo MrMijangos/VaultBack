@@ -7,4 +7,5 @@ type Credentials struct {
 	PasswordHash string
 	AvatarURL    string
 	Role         string
+	Roles        []string
 }

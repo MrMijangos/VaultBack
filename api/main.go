@@ -100,7 +100,11 @@ func main() {
 		cfg.JWTSecret,
 	)
 
-	authRouter.RegisterRoutes(mux, authInfra.BuildLoginController(pool, cfg.JWTSecret, cfg.CookieSecure))
+	authRouter.RegisterRoutes(
+		mux,
+		authInfra.BuildLoginController(pool, cfg.JWTSecret, cfg.CookieSecure),
+		authInfra.BuildGoogleLoginController(pool, cfg.GoogleOAuthClientIDs, cfg.JWTSecret, cfg.CookieSecure),
+	)
 
 	addressesRouter.RegisterRoutes(
 		mux,
@@ -217,6 +221,7 @@ func main() {
 		chatInfra.BuildSendChatMessageController(pool),
 		chatInfra.BuildGetConversationMessagesController(pool),
 		chatInfra.BuildUpdateChatMessageStatusController(pool),
+		chatInfra.BuildGetConversationsController(pool),
 		cfg.JWTSecret,
 	)
 

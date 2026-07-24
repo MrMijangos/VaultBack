@@ -28,3 +28,9 @@ func BuildUpdateChatMessageStatusController(pool *pgxpool.Pool) *controllers.Upd
 	useCase := application.NewUpdateChatMessageStatusUseCase(repo)
 	return controllers.NewUpdateChatMessageStatusController(useCase)
 }
+
+func BuildGetConversationsController(pool *pgxpool.Pool) *controllers.GetConversationsController {
+	repo := adapters.NewPostgreSQLChatMessageRepository(pool)
+	useCase := application.NewGetConversationsUseCase(repo)
+	return controllers.NewGetConversationsController(useCase)
+}
