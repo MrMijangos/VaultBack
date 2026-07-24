@@ -36,7 +36,10 @@ export class PostgresChatMessageRepository implements ChatMessageRepository {
   constructor(private readonly databaseUrl: string) {}
 
   async onNewChatMessage(handler: ChatMessageHandler): Promise<void> {
-    const client = new Client({ connectionString: this.databaseUrl });
+    const client = new Client({
+      connectionString: this.databaseUrl,
+      ssl: { rejectUnauthorized: false },
+    });
     await client.connect();
     await client.query("LISTEN new_chat_message");
 
