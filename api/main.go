@@ -137,6 +137,7 @@ func main() {
 		businessesInfra.BuildGetBusinessByIdController(pool),
 		businessesInfra.BuildUpdateBusinessController(pool),
 		businessesInfra.BuildDeleteBusinessController(pool),
+		businessesInfra.BuildUploadBusinessPhotoController(pool, imageUploader),
 		cfg.JWTSecret,
 	)
 

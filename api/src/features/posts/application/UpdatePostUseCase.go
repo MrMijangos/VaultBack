@@ -26,5 +26,10 @@ func (uc *UpdatePostUseCase) Execute(ctx context.Context, id string, userID stri
 		return response.PostResponse{}, err
 	}
 
-	return response.FromEntity(updated, nil), nil
+	photos, err := uc.repo.FindPhotosByPostID(ctx, updated.ID)
+	if err != nil {
+		return response.PostResponse{}, err
+	}
+
+	return response.FromEntity(updated, photos), nil
 }

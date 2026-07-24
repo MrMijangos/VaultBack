@@ -42,5 +42,5 @@ func (uc *CreateBusinessUseCase) Execute(ctx context.Context, userID string, req
 		return response.BusinessResponse{}, err
 	}
 
-	return response.FromEntity(created), nil
+	return response.FromEntity(created, nil), nil
 }

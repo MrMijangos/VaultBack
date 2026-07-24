@@ -21,7 +21,16 @@ func (uc *GetAllBusinessesUseCase) Execute(ctx context.Context) ([]response.Busi
 	if err != nil {
 		return nil, err
 	}
-	out := response.FromEntities(list)
+
+	out := make([]response.BusinessResponse, 0, len(list))
+	for _, b := range list {
+		photos, err := uc.repo.FindPhotosByBusinessID(ctx, b.ID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, response.FromEntity(b, photos))
+	}
+
 	for i, b := range list {
 		rating, total, err := uc.ratingRepo.GetProviderRating(ctx, b.UserID)
 		if err != nil {

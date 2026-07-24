@@ -59,5 +59,10 @@ func (uc *UpdateAssetUseCase) Execute(ctx context.Context, id string, userID str
 		log.Printf("no se pudo publicar asset.updated: %v", err)
 	}
 
-	return response.FromEntity(updated, nil), nil
+	photos, err := uc.repo.FindPhotosByAssetID(ctx, updated.ID)
+	if err != nil {
+		return response.AssetResponse{}, err
+	}
+
+	return response.FromEntity(updated, photos), nil
 }

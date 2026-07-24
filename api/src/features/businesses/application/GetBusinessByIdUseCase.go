@@ -21,7 +21,11 @@ func (uc *GetBusinessByIdUseCase) Execute(ctx context.Context, id string) (respo
 	if err != nil {
 		return response.BusinessResponse{}, err
 	}
-	out := response.FromEntity(b)
+	photos, err := uc.repo.FindPhotosByBusinessID(ctx, id)
+	if err != nil {
+		return response.BusinessResponse{}, err
+	}
+	out := response.FromEntity(b, photos)
 	rating, total, err := uc.ratingRepo.GetProviderRating(ctx, b.UserID)
 	if err != nil {
 		return response.BusinessResponse{}, err

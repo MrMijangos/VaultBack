@@ -77,10 +77,3 @@ func FromEntity(asset entities.Asset, photos []entities.AssetPhoto) AssetRespons
 	}
 }
 
-func FromEntities(assets []entities.Asset) []AssetResponse {
-	list := make([]AssetResponse, 0, len(assets))
-	for _, a := range assets {
-		list = append(list, FromEntity(a, nil))
-	}
-	return list
-}

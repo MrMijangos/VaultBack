@@ -20,5 +20,14 @@ func (uc *GetSavedPostsUseCase) Execute(ctx context.Context, userID string) ([]r
 	if err != nil {
 		return nil, err
 	}
-	return response.FromEntities(list), nil
+
+	out := make([]response.PostResponse, 0, len(list))
+	for _, p := range list {
+		photos, err := uc.repo.FindPhotosByPostID(ctx, p.ID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, response.FromEntity(p, photos))
+	}
+	return out, nil
 }

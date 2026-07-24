@@ -33,5 +33,10 @@ func (uc *UpdateBusinessUseCase) Execute(ctx context.Context, id string, userID 
 		return response.BusinessResponse{}, err
 	}
 
-	return response.FromEntity(updated), nil
+	photos, err := uc.repo.FindPhotosByBusinessID(ctx, id)
+	if err != nil {
+		return response.BusinessResponse{}, err
+	}
+
+	return response.FromEntity(updated, photos), nil
 }

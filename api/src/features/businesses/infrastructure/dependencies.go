@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vault/src/core/cloudinary"
 	"vault/src/features/businesses/application"
 	"vault/src/features/businesses/infrastructure/adapters"
 	"vault/src/features/businesses/infrastructure/controllers"
@@ -39,4 +40,10 @@ func BuildDeleteBusinessController(pool *pgxpool.Pool) *controllers.DeleteBusine
 	repo := adapters.NewPostgreSQLBusinessRepository(pool)
 	useCase := application.NewDeleteBusinessUseCase(repo)
 	return controllers.NewDeleteBusinessController(useCase)
+}
+
+func BuildUploadBusinessPhotoController(pool *pgxpool.Pool, uploader *cloudinary.ImageUploader) *controllers.UploadBusinessPhotoController {
+	repo := adapters.NewPostgreSQLBusinessRepository(pool)
+	useCase := application.NewUploadBusinessPhotoUseCase(repo, uploader)
+	return controllers.NewUploadBusinessPhotoController(useCase)
 }

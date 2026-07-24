@@ -14,6 +14,7 @@ func RegisterRoutes(
 	getBusinessById *controllers.GetBusinessByIdController,
 	updateBusiness *controllers.UpdateBusinessController,
 	deleteBusiness *controllers.DeleteBusinessController,
+	uploadBusinessPhoto *controllers.UploadBusinessPhotoController,
 	jwtSecret string,
 ) {
 	auth := security.RequireAuth(jwtSecret)
@@ -23,4 +24,5 @@ func RegisterRoutes(
 	mux.HandleFunc("GET /api/v1/businesses/{id}", getBusinessById.Handle)
 	mux.Handle("PUT /api/v1/businesses/{id}", auth(http.HandlerFunc(updateBusiness.Handle)))
 	mux.Handle("DELETE /api/v1/businesses/{id}", auth(http.HandlerFunc(deleteBusiness.Handle)))
+	mux.Handle("POST /api/v1/businesses/{id}/photos", auth(http.HandlerFunc(uploadBusinessPhoto.Handle)))
 }

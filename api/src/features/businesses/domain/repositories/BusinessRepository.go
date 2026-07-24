@@ -17,4 +17,6 @@ type BusinessRepository interface {
 	FindByID(ctx context.Context, id string) (entities.Business, error)
 	Update(ctx context.Context, id string, userID string, business entities.Business) (entities.Business, error)
 	Delete(ctx context.Context, id string, userID string) error
+	FindPhotosByBusinessID(ctx context.Context, businessID string) ([]entities.BusinessPhoto, error)
+	AddPhoto(ctx context.Context, businessID string, url string) (entities.BusinessPhoto, error)
 }

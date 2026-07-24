@@ -48,11 +48,3 @@ func FromEntity(p entities.Post, photos []entities.PostPhoto) PostResponse {
 		CommentsCount:   p.CommentsCount,
 	}
 }
-
-func FromEntities(list []entities.Post) []PostResponse {
-	out := make([]PostResponse, 0, len(list))
-	for _, p := range list {
-		out = append(out, FromEntity(p, nil))
-	}
-	return out
-}

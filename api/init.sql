@@ -64,6 +64,17 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS types text[] DEFAULT '{}'::text[
 ALTER TABLE businesses ALTER COLUMN type DROP NOT NULL;
 UPDATE businesses SET types = ARRAY[type] WHERE types = '{}'::text[] AND type IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS business_photos (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	business_id uuid NOT NULL,
+	url character varying NOT NULL,
+	is_cover boolean DEFAULT false,
+	"order" integer DEFAULT 0,
+	created_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT business_photos_pkey PRIMARY KEY (id),
+	CONSTRAINT business_photos_business_id_fkey FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS business_services (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	business_id uuid NOT NULL,
