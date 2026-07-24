@@ -147,6 +147,17 @@ func (r *PostgreSQLBusinessRepository) AddPhoto(ctx context.Context, businessID 
 	return p, nil
 }
 
+func (r *PostgreSQLBusinessRepository) DeletePhoto(ctx context.Context, photoID string, businessID string) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM business_photos WHERE id = $1 AND business_id = $2`, photoID, businessID)
+	if err != nil {
+		return fmt.Errorf("no se pudo eliminar la foto: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return repositories.ErrBusinessNotFound
+	}
+	return nil
+}
+
 func (r *PostgreSQLBusinessRepository) Delete(ctx context.Context, id string, userID string) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM businesses WHERE id = $1 AND user_id = $2`, id, userID)
 	if err != nil {

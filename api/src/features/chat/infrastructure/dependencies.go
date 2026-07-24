@@ -6,6 +6,7 @@ import (
 	"vault/src/features/chat/application"
 	"vault/src/features/chat/infrastructure/adapters"
 	"vault/src/features/chat/infrastructure/controllers"
+	notificationsAdapters "vault/src/features/notifications/infrastructure/adapters"
 )
 
 // BuildSendChatMessageController no recibe un moderationClient -- a
@@ -13,7 +14,8 @@ import (
 // ve el contenido en texto plano, por lo que no hay nada que moderar.
 func BuildSendChatMessageController(pool *pgxpool.Pool) *controllers.SendChatMessageController {
 	repo := adapters.NewPostgreSQLChatMessageRepository(pool)
-	useCase := application.NewSendChatMessageUseCase(repo)
+	notifier := notificationsAdapters.NewPostgreSQLNotificationRepository(pool)
+	useCase := application.NewSendChatMessageUseCase(repo, notifier)
 	return controllers.NewSendChatMessageController(useCase)
 }
 

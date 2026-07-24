@@ -11,6 +11,7 @@ var allowedNotificationTypes = map[string]bool{
 	"venta":      true,
 	"blockchain": true,
 	"comunidad":  true,
+	"mensaje":    true,
 }
 
 var allowedNotificationSubtypes = map[string]bool{
@@ -23,6 +24,7 @@ var allowedNotificationSubtypes = map[string]bool{
 	"nueva_compra":     true,
 	"asset_verificado": true,
 	"likes_post":       true,
+	"mensaje_nuevo":    true,
 }
 
 type CreateNotificationRequest struct {

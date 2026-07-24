@@ -82,6 +82,28 @@ func (r *PostgreSQLAssetRepository) FindAll(ctx context.Context) ([]entities.Ass
 	return assets, nil
 }
 
+func (r *PostgreSQLAssetRepository) FindByUserID(ctx context.Context, userID string) ([]entities.Asset, error) {
+	rows, err := r.pool.Query(ctx, selectAssetsQuery+" WHERE a.user_id = $1 ORDER BY a.created_at DESC", userID)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudieron listar tus productos: %w", err)
+	}
+	defer rows.Close()
+
+	var assets []entities.Asset
+	for rows.Next() {
+		a, err := scanAsset(rows)
+		if err != nil {
+			return nil, fmt.Errorf("no se pudo leer el producto: %w", err)
+		}
+		assets = append(assets, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error al listar tus productos: %w", err)
+	}
+
+	return assets, nil
+}
+
 func (r *PostgreSQLAssetRepository) FindByID(ctx context.Context, id string) (entities.Asset, error) {
 	row := r.pool.QueryRow(ctx, selectAssetsQuery+" WHERE a.id = $1", id)
 	a, err := scanAsset(row)
@@ -184,4 +206,15 @@ func (r *PostgreSQLAssetRepository) AddPhoto(ctx context.Context, assetID string
 	}
 
 	return p, nil
+}
+
+func (r *PostgreSQLAssetRepository) DeletePhoto(ctx context.Context, photoID string, assetID string) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM asset_photos WHERE id = $1 AND asset_id = $2`, photoID, assetID)
+	if err != nil {
+		return fmt.Errorf("no se pudo eliminar la foto: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return repositories.ErrAssetNotFound
+	}
+	return nil
 }

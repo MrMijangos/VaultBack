@@ -47,3 +47,9 @@ func BuildUploadBusinessPhotoController(pool *pgxpool.Pool, uploader *cloudinary
 	useCase := application.NewUploadBusinessPhotoUseCase(repo, uploader)
 	return controllers.NewUploadBusinessPhotoController(useCase)
 }
+
+func BuildDeleteBusinessPhotoController(pool *pgxpool.Pool) *controllers.DeleteBusinessPhotoController {
+	repo := adapters.NewPostgreSQLBusinessRepository(pool)
+	useCase := application.NewDeleteBusinessPhotoUseCase(repo)
+	return controllers.NewDeleteBusinessPhotoController(useCase)
+}

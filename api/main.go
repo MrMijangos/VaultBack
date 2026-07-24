@@ -119,10 +119,12 @@ func main() {
 		mux,
 		assetsInfra.BuildCreateAssetController(pool, publisher),
 		assetsInfra.BuildGetAllAssetsController(pool),
+		assetsInfra.BuildGetMyAssetsController(pool),
 		assetsInfra.BuildGetAssetByIdController(pool),
 		assetsInfra.BuildUpdateAssetController(pool, publisher),
 		assetsInfra.BuildDeleteAssetController(pool),
 		assetsInfra.BuildUploadAssetPhotoController(pool, imageUploader),
+		assetsInfra.BuildDeleteAssetPhotoController(pool),
 		cfg.JWTSecret,
 	)
 
@@ -142,6 +144,7 @@ func main() {
 		businessesInfra.BuildUpdateBusinessController(pool),
 		businessesInfra.BuildDeleteBusinessController(pool),
 		businessesInfra.BuildUploadBusinessPhotoController(pool, imageUploader),
+		businessesInfra.BuildDeleteBusinessPhotoController(pool),
 		cfg.JWTSecret,
 	)
 

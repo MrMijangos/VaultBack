@@ -22,6 +22,12 @@ func BuildGetAllAssetsController(pool *pgxpool.Pool) *controllers.GetAllAssetsCo
 	return controllers.NewGetAllAssetsController(useCase)
 }
 
+func BuildGetMyAssetsController(pool *pgxpool.Pool) *controllers.GetMyAssetsController {
+	repo := adapters.NewPostgreSQLAssetRepository(pool)
+	useCase := application.NewGetMyAssetsUseCase(repo)
+	return controllers.NewGetMyAssetsController(useCase)
+}
+
 func BuildGetAssetByIdController(pool *pgxpool.Pool) *controllers.GetAssetByIdController {
 	repo := adapters.NewPostgreSQLAssetRepository(pool)
 	useCase := application.NewGetAssetByIdUseCase(repo)
@@ -44,4 +50,10 @@ func BuildUploadAssetPhotoController(pool *pgxpool.Pool, uploader *cloudinary.Im
 	repo := adapters.NewPostgreSQLAssetRepository(pool)
 	useCase := application.NewUploadAssetPhotoUseCase(repo, uploader)
 	return controllers.NewUploadAssetPhotoController(useCase)
+}
+
+func BuildDeleteAssetPhotoController(pool *pgxpool.Pool) *controllers.DeleteAssetPhotoController {
+	repo := adapters.NewPostgreSQLAssetRepository(pool)
+	useCase := application.NewDeleteAssetPhotoUseCase(repo)
+	return controllers.NewDeleteAssetPhotoController(useCase)
 }

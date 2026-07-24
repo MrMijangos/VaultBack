@@ -11,18 +11,22 @@ func RegisterRoutes(
 	mux *http.ServeMux,
 	createAsset *controllers.CreateAssetController,
 	getAllAssets *controllers.GetAllAssetsController,
+	getMyAssets *controllers.GetMyAssetsController,
 	getAssetById *controllers.GetAssetByIdController,
 	updateAsset *controllers.UpdateAssetController,
 	deleteAsset *controllers.DeleteAssetController,
 	uploadAssetPhoto *controllers.UploadAssetPhotoController,
+	deleteAssetPhoto *controllers.DeleteAssetPhotoController,
 	jwtSecret string,
 ) {
 	auth := security.RequireAuth(jwtSecret)
 
 	mux.Handle("POST /api/v1/assets", auth(http.HandlerFunc(createAsset.Handle)))
 	mux.HandleFunc("GET /api/v1/assets", getAllAssets.Handle)
+	mux.Handle("GET /api/v1/assets/mine", auth(http.HandlerFunc(getMyAssets.Handle)))
 	mux.HandleFunc("GET /api/v1/assets/{id}", getAssetById.Handle)
 	mux.Handle("PUT /api/v1/assets/{id}", auth(http.HandlerFunc(updateAsset.Handle)))
 	mux.Handle("DELETE /api/v1/assets/{id}", auth(http.HandlerFunc(deleteAsset.Handle)))
 	mux.Handle("POST /api/v1/assets/{id}/photos", auth(http.HandlerFunc(uploadAssetPhoto.Handle)))
+	mux.Handle("DELETE /api/v1/assets/{id}/photos/{photoId}", auth(http.HandlerFunc(deleteAssetPhoto.Handle)))
 }
