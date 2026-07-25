@@ -1,9 +1,18 @@
 import { Server as HTTPServer, IncomingMessage } from "http";
 import { URL } from "url";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 
 import { verifyToken } from "../security/JWT";
 import { ConnectionRegistry } from "./ConnectionRegistry";
+
+// Un socket que perdió la conexión de golpe (cambio de red, app en segundo
+// plano, NAT/proxy que corta conexiones inactivas) no siempre manda un
+// close/FIN limpio -- para `ws`, `readyState` se queda en OPEN aunque ya
+// nadie esté del otro lado, así que sendToUser() manda al vacío en
+// silencio. El ping/pong de abajo detecta y cierra esos sockets zombis.
+type TrackedSocket = WebSocket & { isAlive?: boolean };
+
+const HEARTBEAT_INTERVAL_MS = 30_000;
 
 function extractToken(request: IncomingMessage): string | null {
   const url = new URL(request.url ?? "", "http://localhost");
@@ -31,6 +40,22 @@ export class AuthenticatedWebSocketServer {
   ) {
     this.wss = new WebSocketServer({ noServer: true });
     this.registerUpgradeHandler();
+    this.startHeartbeat();
+  }
+
+  private startHeartbeat(): void {
+    const interval = setInterval(() => {
+      for (const ws of this.wss.clients) {
+        const tracked = ws as TrackedSocket;
+        if (tracked.isAlive === false) {
+          tracked.terminate();
+          continue;
+        }
+        tracked.isAlive = false;
+        tracked.ping();
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+    this.wss.on("close", () => clearInterval(interval));
   }
 
   private registerUpgradeHandler(): void {
@@ -59,6 +84,12 @@ export class AuthenticatedWebSocketServer {
       }
 
       this.wss.handleUpgrade(request, socket, head, (ws) => {
+        const tracked = ws as TrackedSocket;
+        tracked.isAlive = true;
+        ws.on("pong", () => {
+          tracked.isAlive = true;
+        });
+
         this.connectionRegistry.add(userId, ws);
         ws.on("close", () => this.connectionRegistry.remove(userId, ws));
         ws.on("error", () => this.connectionRegistry.remove(userId, ws));
