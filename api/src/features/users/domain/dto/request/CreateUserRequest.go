@@ -3,6 +3,8 @@ package request
 import (
 	"errors"
 	"strings"
+
+	"vault/src/core/validation"
 )
 
 // "admin" no está aquí a propósito: este mapa se usa para validar roles que
@@ -30,7 +32,7 @@ func (r *CreateUserRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("el nombre es obligatorio")
 	}
-	if !strings.Contains(r.Email, "@") {
+	if !validation.IsValidEmail(r.Email) {
 		return errors.New("el correo no es valido")
 	}
 	if len(r.Password) < 8 {
