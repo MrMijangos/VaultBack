@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"vault/src/core/httpresponse"
+	"vault/src/core/security"
 	"vault/src/features/users/application"
 	"vault/src/features/users/domain/dto/request"
 	"vault/src/features/users/domain/repositories"
@@ -22,9 +23,19 @@ func NewUpdateUserController(useCase *application.UpdateUserUseCase) *UpdateUser
 }
 
 func (c *UpdateUserController) Handle(w http.ResponseWriter, r *http.Request) {
+	claims, ok := security.ClaimsFromContext(r.Context())
+	if !ok {
+		httpresponse.WriteError(w, http.StatusUnauthorized, "no autenticado")
+		return
+	}
+
 	id := r.PathValue("id")
 	if _, err := uuid.Parse(id); err != nil {
 		httpresponse.WriteError(w, http.StatusBadRequest, "id invalido")
+		return
+	}
+	if claims.UserID != id {
+		httpresponse.WriteError(w, http.StatusForbidden, "no puedes modificar a otro usuario")
 		return
 	}
 

@@ -5,12 +5,17 @@ import (
 	"strings"
 )
 
+// "admin" no está aquí a propósito: este mapa se usa para validar roles que
+// el propio cliente puede autoasignarse (registro, PUT /users/{id}, POST
+// /users/{id}/roles). El rol admin no se gestiona por ningún endpoint
+// self-service todavía -- solo se puede otorgar escribiendo directo en la
+// base de datos, que sí lo permite (ver el CHECK de la columna role en
+// init.sql).
 var allowedRoles = map[string]bool{
 	"usuario":     true,
 	"vendedor":    true,
 	"restaurador": true,
 	"servicio":    true,
-	"admin":       true,
 }
 
 type CreateUserRequest struct {
