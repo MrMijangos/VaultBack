@@ -27,7 +27,11 @@ async function getAccount() {
   // fromMnemonic es async (espera a que cargue wasm-crypto) -- sin el
   // await, account quedaba como una Promise sin resolver y firmar la
   // transacción fallaba en silencio.
-  account = await GearKeyring.fromMnemonic(process.env.VARA_MNEMONIC, 'vault-blockchain');
+  // trim() -- variables de entorno pegadas en paneles como Railway a veces
+  // arrastran un espacio o salto de línea de sobra, y addFromUri() rechaza
+  // el mnemonic completo con "Unable to match provided value to a secret
+  // URI" en vez de ignorarlo.
+  account = await GearKeyring.fromMnemonic(process.env.VARA_MNEMONIC.trim(), 'vault-blockchain');
   return account;
 }
 
