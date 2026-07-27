@@ -2,8 +2,10 @@ package application
 
 import (
 	"context"
+	"log"
 	"time"
 
+	"vault/src/core/eventbus"
 	assetrepositories "vault/src/features/assets/domain/repositories"
 	"vault/src/features/maintenancelogs/domain/dto/request"
 	"vault/src/features/maintenancelogs/domain/dto/response"
@@ -14,10 +16,11 @@ import (
 type CreateMaintenanceLogUseCase struct {
 	repo      repositories.MaintenanceLogRepository
 	assetRepo assetrepositories.AssetRepository
+	publisher eventbus.Publisher
 }
 
-func NewCreateMaintenanceLogUseCase(repo repositories.MaintenanceLogRepository, assetRepo assetrepositories.AssetRepository) *CreateMaintenanceLogUseCase {
-	return &CreateMaintenanceLogUseCase{repo: repo, assetRepo: assetRepo}
+func NewCreateMaintenanceLogUseCase(repo repositories.MaintenanceLogRepository, assetRepo assetrepositories.AssetRepository, publisher eventbus.Publisher) *CreateMaintenanceLogUseCase {
+	return &CreateMaintenanceLogUseCase{repo: repo, assetRepo: assetRepo, publisher: publisher}
 }
 
 func (uc *CreateMaintenanceLogUseCase) Execute(ctx context.Context, userID string, req request.CreateMaintenanceLogRequest) (response.MaintenanceLogResponse, error) {
@@ -58,6 +61,25 @@ func (uc *CreateMaintenanceLogUseCase) Execute(ctx context.Context, userID strin
 	})
 	if err != nil {
 		return response.MaintenanceLogResponse{}, err
+	}
+
+	// maintenance.registered: lo consume vault-blockchain para certificar el
+	// mantenimiento/restauración en Vara Network.
+	maintenanceRegisteredPayload := struct {
+		EventType     string `json:"event_type"`
+		MaintenanceID string `json:"maintenance_id"`
+		AssetID       string `json:"asset_id"`
+		UserID        string `json:"user_id"`
+		Type          string `json:"type"`
+	}{
+		EventType:     "maintenance.registered",
+		MaintenanceID: created.ID,
+		AssetID:       created.AssetID,
+		UserID:        userID,
+		Type:          created.Type,
+	}
+	if err := uc.publisher.PublishEvent(ctx, "maintenance.registered", maintenanceRegisteredPayload); err != nil {
+		log.Printf("no se pudo publicar maintenance.registered: %v", err)
 	}
 
 	return response.FromEntity(created), nil

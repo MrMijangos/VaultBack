@@ -3,16 +3,17 @@ package infrastructure
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vault/src/core/eventbus"
 	assetadapters "vault/src/features/assets/infrastructure/adapters"
 	"vault/src/features/maintenancelogs/application"
 	"vault/src/features/maintenancelogs/infrastructure/adapters"
 	"vault/src/features/maintenancelogs/infrastructure/controllers"
 )
 
-func BuildCreateMaintenanceLogController(pool *pgxpool.Pool) *controllers.CreateMaintenanceLogController {
+func BuildCreateMaintenanceLogController(pool *pgxpool.Pool, publisher eventbus.Publisher) *controllers.CreateMaintenanceLogController {
 	repo := adapters.NewPostgreSQLMaintenanceLogRepository(pool)
 	assetRepo := assetadapters.NewPostgreSQLAssetRepository(pool)
-	useCase := application.NewCreateMaintenanceLogUseCase(repo, assetRepo)
+	useCase := application.NewCreateMaintenanceLogUseCase(repo, assetRepo, publisher)
 	return controllers.NewCreateMaintenanceLogController(useCase)
 }
 

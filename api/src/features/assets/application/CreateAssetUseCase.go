@@ -56,10 +56,32 @@ func (uc *CreateAssetUseCase) Execute(ctx context.Context, userID string, req re
 		return response.AssetResponse{}, err
 	}
 
-	// asset.updated (no asset.created): vault-ai-service usa la misma
-	// routing key para cualquier cambio que afecte el perfil ML del usuario.
+	// asset.updated: vault-ai-service usa la misma routing key para
+	// cualquier cambio que afecte el perfil ML del usuario.
 	if err := uc.publisher.Publish(ctx, "asset.updated", created.UserID, created.ID, nil); err != nil {
 		log.Printf("no se pudo publicar asset.updated: %v", err)
+	}
+
+	// asset.created: lo consume vault-blockchain para certificar el activo
+	// en Vara Network -- necesita name/category/created_at para calcular el
+	// hash del activo, por eso no reusa el shape de Publish/asset.updated.
+	assetCreatedPayload := struct {
+		EventType string    `json:"event_type"`
+		AssetID   string    `json:"asset_id"`
+		UserID    string    `json:"user_id"`
+		Name      string    `json:"name"`
+		Category  string    `json:"category"`
+		CreatedAt time.Time `json:"created_at"`
+	}{
+		EventType: "asset.created",
+		AssetID:   created.ID,
+		UserID:    created.UserID,
+		Name:      created.Name,
+		Category:  created.Category,
+		CreatedAt: created.CreatedAt,
+	}
+	if err := uc.publisher.PublishEvent(ctx, "asset.created", assetCreatedPayload); err != nil {
+		log.Printf("no se pudo publicar asset.created: %v", err)
 	}
 
 	return response.FromEntity(created, nil), nil

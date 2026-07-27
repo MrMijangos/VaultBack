@@ -20,6 +20,13 @@ const ExchangeName = "vault.events"
 // nlp.analyzed de vuelta (ver Consumer.go).
 type Publisher interface {
 	Publish(ctx context.Context, eventType string, userID string, sourceID string, text *string) error
+
+	// PublishEvent publica un payload propio del evento (no el shape fijo de
+	// Publish) -- lo usan asset.created y maintenance.registered, que
+	// vault-blockchain consume con campos que Publish no contempla (name,
+	// category, created_at / maintenance_id, type). El payload debe incluir
+	// su propio "event_type" via json tag si se quiere que viaje en el body.
+	PublishEvent(ctx context.Context, eventType string, payload any) error
 }
 
 type eventPayload struct {
@@ -81,6 +88,24 @@ func (p *RabbitMQPublisher) Publish(ctx context.Context, eventType string, userI
 	return nil
 }
 
+// PublishEvent serializa el payload tal cual (a diferencia de Publish, no lo
+// envuelve en eventPayload) -- quien llama controla el shape completo.
+func (p *RabbitMQPublisher) PublishEvent(ctx context.Context, eventType string, payload any) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("no se pudo serializar el evento %s: %w", eventType, err)
+	}
+
+	err = p.ch.PublishWithContext(ctx, ExchangeName, eventType, false, false, amqp.Publishing{
+		ContentType: "application/json",
+		Body:        body,
+	})
+	if err != nil {
+		return fmt.Errorf("no se pudo publicar el evento %s: %w", eventType, err)
+	}
+	return nil
+}
+
 func (p *RabbitMQPublisher) Close() {
 	if p.ch != nil {
 		p.ch.Close()
@@ -98,5 +123,10 @@ type NoopPublisher struct{}
 
 func (NoopPublisher) Publish(_ context.Context, eventType string, _ string, sourceID string, _ *string) error {
 	log.Printf("[eventbus] RabbitMQ no disponible, evento %s (source_id=%s) no publicado", eventType, sourceID)
+	return nil
+}
+
+func (NoopPublisher) PublishEvent(_ context.Context, eventType string, _ any) error {
+	log.Printf("[eventbus] RabbitMQ no disponible, evento %s no publicado", eventType)
 	return nil
 }

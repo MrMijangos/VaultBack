@@ -1,4 +1,4 @@
-const { CreateType } = require('@gear-js/api');
+const { CreateType, decodeAddress } = require('@gear-js/api');
 const { getApi, getAccount } = require('./gear_api');
 
 // Debe coincidir exactamente con CertificateMessage en
@@ -26,7 +26,7 @@ async function sendCertificate({ assetId, ownerId, assetHash, action }) {
   }
 
   const api = await getApi();
-  const account = getAccount();
+  const account = await getAccount();
 
   const payloadHex = createType
     .create('CertificateMessage', {
@@ -76,8 +76,11 @@ async function resolveGasLimit(api, account, contractId, payloadHex) {
   const fixed = process.env.VARA_GAS_LIMIT;
   if (fixed) return BigInt(fixed);
 
+  // calculateGas.handle espera sourceId como H256 hex, no como dirección
+  // SS58 -- sin decodeAddress falla con "Expected input with 32 bytes,
+  // found 49 bytes" (la longitud del string SS58).
   const gasInfo = await api.program.calculateGas.handle(
-    account.address,
+    decodeAddress(account.address),
     contractId,
     payloadHex,
     0,

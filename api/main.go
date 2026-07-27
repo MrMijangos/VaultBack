@@ -159,7 +159,7 @@ func main() {
 
 	maintenancelogsRouter.RegisterRoutes(
 		mux,
-		maintenancelogsInfra.BuildCreateMaintenanceLogController(pool),
+		maintenancelogsInfra.BuildCreateMaintenanceLogController(pool, publisher),
 		maintenancelogsInfra.BuildGetLogsByAssetController(pool),
 		maintenancelogsInfra.BuildGetMaintenanceLogByIdController(pool),
 		maintenancelogsInfra.BuildUpdateMaintenanceLogController(pool),

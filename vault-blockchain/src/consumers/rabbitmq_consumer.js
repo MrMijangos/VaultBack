@@ -1,13 +1,12 @@
 // rabbitmq_consumer.js -- se conecta al mismo exchange topic "vault.events"
 // que usan api/ y payment/ (no colas sueltas por fuera del exchange).
 //
-// IMPORTANTE: al momento de escribir esto, api/ TODAVÍA NO publica ni
-// "asset.created" ni "maintenance.registered" -- solo publica "asset.updated"
-// (para el servicio de ML, con un payload distinto: {event_type, user_id,
-// source_id}) y no publica nada al crear un maintenance log. Este consumer
-// se queda escuchando sin recibir nada hasta que se agregue esa publicación
-// en api/ (CreateAssetUseCase.go / CreateMaintenanceLogUseCase.go), usando
-// el payload que se documenta abajo en handleAssetCreated/handleMaintenanceRegistered.
+// api/ publica "asset.created" (CreateAssetUseCase.go) y
+// "maintenance.registered" (CreateMaintenanceLogUseCase.go) via
+// eventbus.Publisher.PublishEvent, con exactamente los campos que se leen
+// abajo (asset_id, user_id, name, category, created_at / maintenance_id,
+// asset_id, user_id, type). "asset.updated" es un evento aparte, para
+// vault-ai-service, con un payload distinto -- no lo consume este servicio.
 const amqp = require('amqplib');
 const crypto = require('crypto');
 

@@ -19,12 +19,15 @@ async function getApi() {
   return api;
 }
 
-function getAccount() {
+async function getAccount() {
   if (account) return account;
   if (!process.env.VARA_MNEMONIC) {
     throw new Error('VARA_MNEMONIC no está configurado');
   }
-  account = GearKeyring.fromMnemonic(process.env.VARA_MNEMONIC, 'vault-blockchain');
+  // fromMnemonic es async (espera a que cargue wasm-crypto) -- sin el
+  // await, account quedaba como una Promise sin resolver y firmar la
+  // transacción fallaba en silencio.
+  account = await GearKeyring.fromMnemonic(process.env.VARA_MNEMONIC, 'vault-blockchain');
   return account;
 }
 

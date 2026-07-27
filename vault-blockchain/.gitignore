@@ -1,2 +1,4 @@
 node_modules
 .env
+contracts/asset_certificate/target
+contracts/asset_certificate/.binpath
