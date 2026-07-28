@@ -260,20 +260,17 @@ CREATE TRIGGER notifications_notify_trigger
 	AFTER INSERT ON notifications
 	FOR EACH ROW EXECUTE FUNCTION notify_new_notification();
 
--- "mensaje"/"mensaje_nuevo" se agregan para que el chat pueda avisarle al
--- destinatario de un mensaje nuevo -- los CHECK originales no los incluían.
-ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
-ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
-	CHECK (type::text = ANY (ARRAY['servicio', 'reparacion', 'venta', 'blockchain', 'comunidad', 'mensaje']::text[]));
-
-ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_subtype_check;
-ALTER TABLE notifications ADD CONSTRAINT notifications_subtype_check
-	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo']::text[]));
-
--- "suscripcion" -- payment/ publicaba subscription.activated/renewed/failed/
--- canceled/expiring desde antes, pero nadie los consumía todavía (ver
--- eventbus.StartSubscriptionEventsConsumer): sin type/subtype propios acá,
--- ese INSERT fallaba contra el CHECK de arriba.
+-- "mensaje"/"suscripcion" -- este archivo se re-ejecuta completo en cada
+-- arranque (ver RunMigrations, api/src/core/config/Migration.go), no es un
+-- historial de migraciones aplicadas una sola vez. Antes había acá un primer
+-- ALTER más angosto (sin "mensaje"/"suscripcion") seguido de este mismo
+-- ALTER más amplio -- funcionaba en el primer deploy, pero en cuanto ya
+-- existía una fila con type='suscripcion' en la tabla (una vez que
+-- StartSubscriptionEventsConsumer insertó la primera notificación real), el
+-- ALTER angosto volvía a ejecutarse en cada reinicio y fallaba contra esa
+-- fila ya existente (CHECK violation), tumbando el contenedor en un loop de
+-- crashes. Se deja solo el ALTER final (superset del que se quitó) para que
+-- sea idempotente de verdad.
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
 	CHECK (type::text = ANY (ARRAY['servicio', 'reparacion', 'venta', 'blockchain', 'comunidad', 'mensaje', 'suscripcion']::text[]));
