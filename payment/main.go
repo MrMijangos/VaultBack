@@ -108,6 +108,7 @@ func main() {
 		adsInfra.BuildUpdateAdController(adRepo),
 		adsInfra.BuildDeleteAdController(adRepo),
 		adsInfra.BuildListActiveAdsController(adRepo),
+		adsInfra.BuildListMyAdsController(adRepo),
 		adsInfra.BuildRegisterImpressionController(adRepo),
 		adsInfra.BuildRegisterClickController(adRepo),
 	)

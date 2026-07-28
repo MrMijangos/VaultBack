@@ -26,6 +26,11 @@ func BuildListActiveAdsController(adRepo repositories.AdRepository) *controllers
 	return controllers.NewListActiveAdsController(useCase)
 }
 
+func BuildListMyAdsController(adRepo repositories.AdRepository) *controllers.ListMyAdsController {
+	useCase := application.NewListMyAdsUseCase(adRepo)
+	return controllers.NewListMyAdsController(useCase)
+}
+
 func BuildRegisterImpressionController(adRepo repositories.AdRepository) *controllers.RegisterImpressionController {
 	useCase := application.NewRegisterImpressionUseCase(adRepo)
 	return controllers.NewRegisterImpressionController(useCase)

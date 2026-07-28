@@ -18,6 +18,7 @@ func RegisterRoutes(
 	update *controllers.UpdateAdController,
 	deleteAd *controllers.DeleteAdController,
 	listActive *controllers.ListActiveAdsController,
+	listMine *controllers.ListMyAdsController,
 	registerImpression *controllers.RegisterImpressionController,
 	registerClick *controllers.RegisterClickController,
 ) {
@@ -30,6 +31,7 @@ func RegisterRoutes(
 	authed := ads.Group("")
 	authed.Use(security.RequireAuth(jwtSecret))
 	authed.POST("", create.Handle)
+	authed.GET("/mine", listMine.Handle)
 	authed.PUT("/:id", update.Handle)
 	authed.DELETE("/:id", deleteAd.Handle)
 }
