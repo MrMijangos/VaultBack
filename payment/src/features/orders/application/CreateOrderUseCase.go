@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"vault-payment/src/core/eventbus"
 	"vault-payment/src/core/stripeclient"
 	"vault-payment/src/features/orders/domain/dto/request"
 	"vault-payment/src/features/orders/domain/dto/response"
@@ -24,6 +25,7 @@ type CreateOrderUseCase struct {
 	commissionProvider repositories.SellerCommissionProvider
 	accountProvider    repositories.SellerAccountProvider
 	stripeClient       stripeclient.Client
+	publisher          eventbus.Publisher
 }
 
 func NewCreateOrderUseCase(
@@ -31,12 +33,14 @@ func NewCreateOrderUseCase(
 	commissionProvider repositories.SellerCommissionProvider,
 	accountProvider repositories.SellerAccountProvider,
 	stripeClient stripeclient.Client,
+	publisher eventbus.Publisher,
 ) *CreateOrderUseCase {
 	return &CreateOrderUseCase{
 		orderRepo:          orderRepo,
 		commissionProvider: commissionProvider,
 		accountProvider:    accountProvider,
 		stripeClient:       stripeClient,
+		publisher:          publisher,
 	}
 }
 
@@ -89,6 +93,14 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, buyerID string, req r
 	if err := uc.orderRepo.Create(ctx, order); err != nil {
 		return nil, err
 	}
+
+	_ = uc.publisher.PublishOrderEvent(ctx, eventbus.OrderEventPayload{
+		EventType: eventbus.EventOrderCreated,
+		OrderID:   order.ID,
+		BuyerID:   order.BuyerID,
+		SellerID:  order.SellerID,
+		AssetID:   order.AssetID,
+	})
 
 	out := response.OrderFromEntity(order)
 	return &out, nil

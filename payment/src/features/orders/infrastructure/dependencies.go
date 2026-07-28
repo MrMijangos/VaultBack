@@ -13,8 +13,9 @@ func BuildCreateOrderController(
 	commissionProvider repositories.SellerCommissionProvider,
 	accountProvider repositories.SellerAccountProvider,
 	stripeClient stripeclient.Client,
+	publisher eventbus.Publisher,
 ) *controllers.CreateOrderController {
-	useCase := application.NewCreateOrderUseCase(orderRepo, commissionProvider, accountProvider, stripeClient)
+	useCase := application.NewCreateOrderUseCase(orderRepo, commissionProvider, accountProvider, stripeClient, publisher)
 	return controllers.NewCreateOrderController(useCase)
 }
 
@@ -31,4 +32,22 @@ func BuildConfirmOrderController(
 func BuildGetOrderController(orderRepo repositories.OrderRepository) *controllers.GetOrderController {
 	useCase := application.NewGetOrderUseCase(orderRepo)
 	return controllers.NewGetOrderController(useCase)
+}
+
+func BuildShipOrderController(
+	orderRepo repositories.OrderRepository,
+	publisher eventbus.Publisher,
+) *controllers.ShipOrderController {
+	useCase := application.NewShipOrderUseCase(orderRepo, publisher)
+	return controllers.NewShipOrderController(useCase)
+}
+
+func BuildListMyOrdersController(orderRepo repositories.OrderRepository) *controllers.ListMyOrdersController {
+	useCase := application.NewListMyOrdersUseCase(orderRepo)
+	return controllers.NewListMyOrdersController(useCase)
+}
+
+func BuildListMySalesController(orderRepo repositories.OrderRepository) *controllers.ListMySalesController {
+	useCase := application.NewListMySalesUseCase(orderRepo)
+	return controllers.NewListMySalesController(useCase)
 }

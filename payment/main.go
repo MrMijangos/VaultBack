@@ -123,9 +123,12 @@ func main() {
 	ordersRouter.RegisterRoutes(
 		api,
 		cfg.JWTSecret,
-		ordersInfra.BuildCreateOrderController(orderRepo, sellerCommissionProvider, sellerAccountProvider, stripeClient),
+		ordersInfra.BuildCreateOrderController(orderRepo, sellerCommissionProvider, sellerAccountProvider, stripeClient, publisher),
 		ordersInfra.BuildConfirmOrderController(orderRepo, sellerAccountProvider, stripeClient, publisher),
 		ordersInfra.BuildGetOrderController(orderRepo),
+		ordersInfra.BuildShipOrderController(orderRepo, publisher),
+		ordersInfra.BuildListMyOrdersController(orderRepo),
+		ordersInfra.BuildListMySalesController(orderRepo),
 	)
 
 	fmt.Println("Servicio de pagos Vault iniciado correctamente.")

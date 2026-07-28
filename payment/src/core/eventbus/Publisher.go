@@ -40,6 +40,16 @@ type SubscriptionEventPayload struct {
 // el resto de la persistencia, igual que con los eventos subscription.*.
 const EventOrderConfirmed = "order.confirmed"
 
+// EventOrderCreated se publica al crear la orden (comprador ya pagó, dinero
+// retenido) -- notifica al vendedor que tiene una venta nueva.
+// EventOrderShipped se publica cuando el vendedor marca el pedido como
+// enviado -- notifica al comprador para que sepa que ya puede esperarlo y,
+// una vez que lo reciba, confirmarlo.
+const (
+	EventOrderCreated = "order.created"
+	EventOrderShipped = "order.shipped"
+)
+
 type OrderEventPayload struct {
 	EventType string `json:"event_type"`
 	OrderID   string `json:"order_id"`

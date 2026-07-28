@@ -13,11 +13,17 @@ func RegisterRoutes(
 	create *controllers.CreateOrderController,
 	confirm *controllers.ConfirmOrderController,
 	get *controllers.GetOrderController,
+	ship *controllers.ShipOrderController,
+	listMine *controllers.ListMyOrdersController,
+	listSelling *controllers.ListMySalesController,
 ) {
 	orders := rg.Group("/orders")
 	orders.Use(security.RequireAuth(jwtSecret))
 
 	orders.POST("", create.Handle)
+	orders.GET("/mine", listMine.Handle)
+	orders.GET("/selling", listSelling.Handle)
 	orders.GET("/:id", get.Handle)
 	orders.POST("/:id/confirm", confirm.Handle)
+	orders.POST("/:id/ship", ship.Handle)
 }

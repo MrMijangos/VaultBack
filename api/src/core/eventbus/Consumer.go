@@ -26,6 +26,12 @@ const (
 
 	orderConfirmedQueue      = "vault-api.order-confirmed"
 	orderConfirmedRoutingKey = "order.confirmed"
+
+	orderCreatedQueue      = "vault-api.order-created"
+	orderCreatedRoutingKey = "order.created"
+
+	orderShippedQueue      = "vault-api.order-shipped"
+	orderShippedRoutingKey = "order.shipped"
 )
 
 // nlpAnalyzedPayload es el resultado que vault-ai-service publica tras
@@ -457,5 +463,172 @@ func handleOrderConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 	body := fmt.Sprintf("Ya eres el dueño de %s. Puedes ver su certificado en Vara desde su detalle.", assetName)
 	if _, err := pool.Exec(context.Background(), notifyQuery, payload.BuyerID, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion de compra para el activo %s: %v", payload.AssetID, err)
+	}
+}
+
+// StartOrderCreatedConsumer escucha order.created (payment/ lo publica en
+// CreateOrderUseCase.go justo después de cobrar al comprador) y avisa al
+// vendedor de la venta nueva -- antes de esto el vendedor solo se enteraba
+// si entraba a revisar manualmente, no había notificación ni forma de ver
+// sus pedidos (ver ListMySalesUseCase.go en payment/).
+func StartOrderCreatedConsumer(url string, pool *pgxpool.Pool) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir order.created: %v", err)
+		return
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Printf("[eventbus] no se pudo abrir canal para consumir order.created: %v", err)
+		conn.Close()
+		return
+	}
+
+	if err := ch.ExchangeDeclare(ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo declarar el exchange %s: %v", ExchangeName, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	queue, err := ch.QueueDeclare(orderCreatedQueue, true, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo declarar la cola %s: %v", orderCreatedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	if err := ch.QueueBind(queue.Name, orderCreatedRoutingKey, ExchangeName, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo enlazar la cola %s: %v", orderCreatedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo iniciar el consumo de %s: %v", orderCreatedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	log.Printf("[eventbus] escuchando %s en la cola %s", orderCreatedRoutingKey, orderCreatedQueue)
+
+	go func() {
+		for msg := range msgs {
+			handleOrderCreated(pool, msg)
+		}
+	}()
+}
+
+func handleOrderCreated(pool *pgxpool.Pool, msg amqp.Delivery) {
+	defer msg.Ack(false)
+
+	var payload orderConfirmedPayload
+	if err := json.Unmarshal(msg.Body, &payload); err != nil {
+		log.Printf("[eventbus] mensaje order.created inválido: %v", err)
+		return
+	}
+
+	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
+	if err != nil {
+		log.Printf("[eventbus] no se pudo serializar data de la notificacion de venta nueva: %v", err)
+		return
+	}
+
+	const query = `
+		INSERT INTO notifications (user_id, type, subtype, title, body, data)
+		VALUES ($1, 'venta', 'pedido_recibido', $2, $3, $4)
+	`
+	const title = "Tienes una venta nueva"
+	const body = "Un comprador ya pagó tu producto. Márcalo como enviado cuando lo despaches."
+	if _, err := pool.Exec(context.Background(), query, payload.SellerID, title, body, data); err != nil {
+		log.Printf("[eventbus] no se pudo crear la notificacion de venta nueva para la orden %s: %v", payload.OrderID, err)
+	}
+}
+
+// StartOrderShippedConsumer escucha order.shipped (payment/ lo publica en
+// ShipOrderUseCase.go cuando el vendedor marca el pedido como enviado) y
+// avisa al comprador -- antes de esto no existía el paso "enviado" ni una
+// forma de que el comprador supiera que ya podía esperar su pedido.
+func StartOrderShippedConsumer(url string, pool *pgxpool.Pool) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir order.shipped: %v", err)
+		return
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Printf("[eventbus] no se pudo abrir canal para consumir order.shipped: %v", err)
+		conn.Close()
+		return
+	}
+
+	if err := ch.ExchangeDeclare(ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo declarar el exchange %s: %v", ExchangeName, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	queue, err := ch.QueueDeclare(orderShippedQueue, true, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo declarar la cola %s: %v", orderShippedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	if err := ch.QueueBind(queue.Name, orderShippedRoutingKey, ExchangeName, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo enlazar la cola %s: %v", orderShippedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo iniciar el consumo de %s: %v", orderShippedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	log.Printf("[eventbus] escuchando %s en la cola %s", orderShippedRoutingKey, orderShippedQueue)
+
+	go func() {
+		for msg := range msgs {
+			handleOrderShipped(pool, msg)
+		}
+	}()
+}
+
+func handleOrderShipped(pool *pgxpool.Pool, msg amqp.Delivery) {
+	defer msg.Ack(false)
+
+	var payload orderConfirmedPayload
+	if err := json.Unmarshal(msg.Body, &payload); err != nil {
+		log.Printf("[eventbus] mensaje order.shipped inválido: %v", err)
+		return
+	}
+
+	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
+	if err != nil {
+		log.Printf("[eventbus] no se pudo serializar data de la notificacion de envío: %v", err)
+		return
+	}
+
+	const query = `
+		INSERT INTO notifications (user_id, type, subtype, title, body, data)
+		VALUES ($1, 'venta', 'pedido_enviado', $2, $3, $4)
+	`
+	const title = "Tu pedido fue enviado"
+	const body = "El vendedor marcó tu pedido como enviado. Confírmalo cuando lo recibas."
+	if _, err := pool.Exec(context.Background(), query, payload.BuyerID, title, body, data); err != nil {
+		log.Printf("[eventbus] no se pudo crear la notificacion de envío para la orden %s: %v", payload.OrderID, err)
 	}
 }

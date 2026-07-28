@@ -49,8 +49,8 @@ func (uc *ConfirmOrderUseCase) Execute(ctx context.Context, buyerID, orderID str
 	if order.BuyerID != buyerID {
 		return nil, ErrNotBuyer
 	}
-	if order.Status != entities.OrderStatusHeld {
-		return nil, ErrNotHeld
+	if order.Status != entities.OrderStatusShipped {
+		return nil, ErrNotShipped
 	}
 
 	accountID, ready, err := uc.accountProvider.GetChargesEnabledAccountID(ctx, order.SellerID)

@@ -80,6 +80,8 @@ func main() {
 		eventbus.StartBlockchainConfirmedConsumer(cfg.RabbitMQURL, pool)
 		eventbus.StartSubscriptionEventsConsumer(cfg.RabbitMQURL, pool)
 		eventbus.StartOrderConfirmedConsumer(cfg.RabbitMQURL, pool)
+		eventbus.StartOrderCreatedConsumer(cfg.RabbitMQURL, pool)
+		eventbus.StartOrderShippedConsumer(cfg.RabbitMQURL, pool)
 	}
 
 	// Cliente síncrono de moderación: se llama antes de guardar un post,

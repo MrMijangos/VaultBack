@@ -10,6 +10,10 @@ const (
 	// OrderStatusReleased: el comprador confirmó recibido -- el dinero (menos
 	// la comisión de Vault) ya se transfirió a la cuenta Stripe del vendedor.
 	OrderStatusReleased = "liberado"
+	// OrderStatusShipped: el vendedor marcó el pedido como enviado -- paso
+	// intermedio obligatorio antes de que el comprador pueda confirmar
+	// recibido (antes no existía, ConfirmOrderUseCase exigía solo Held).
+	OrderStatusShipped = "enviado"
 )
 
 // Order es una compra-venta con el pago retenido en escrow -- distinto de

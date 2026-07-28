@@ -18,7 +18,11 @@ func statusForError(err error) int {
 		return http.StatusNotFound
 	case errors.Is(err, application.ErrNotBuyer):
 		return http.StatusForbidden
+	case errors.Is(err, application.ErrNotSeller):
+		return http.StatusForbidden
 	case errors.Is(err, application.ErrNotHeld):
+		return http.StatusConflict
+	case errors.Is(err, application.ErrNotShipped):
 		return http.StatusConflict
 	case stripeclient.IsNotConfigured(err):
 		return http.StatusServiceUnavailable
