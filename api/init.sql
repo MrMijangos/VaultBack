@@ -270,6 +270,18 @@ ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_subtype_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_subtype_check
 	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo']::text[]));
 
+-- "suscripcion" -- payment/ publicaba subscription.activated/renewed/failed/
+-- canceled/expiring desde antes, pero nadie los consumía todavía (ver
+-- eventbus.StartSubscriptionEventsConsumer): sin type/subtype propios acá,
+-- ese INSERT fallaba contra el CHECK de arriba.
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+	CHECK (type::text = ANY (ARRAY['servicio', 'reparacion', 'venta', 'blockchain', 'comunidad', 'mensaje', 'suscripcion']::text[]));
+
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_subtype_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_subtype_check
+	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer']::text[]));
+
 CREATE TABLE IF NOT EXISTS addresses (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NOT NULL,

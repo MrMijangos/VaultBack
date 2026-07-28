@@ -78,6 +78,8 @@ func main() {
 		publisher = rabbitPublisher
 		eventbus.StartNLPAnalyzedConsumer(cfg.RabbitMQURL, pool)
 		eventbus.StartBlockchainConfirmedConsumer(cfg.RabbitMQURL, pool)
+		eventbus.StartSubscriptionEventsConsumer(cfg.RabbitMQURL, pool)
+		eventbus.StartOrderConfirmedConsumer(cfg.RabbitMQURL, pool)
 	}
 
 	// Cliente síncrono de moderación: se llama antes de guardar un post,

@@ -7,6 +7,10 @@
 // abajo (asset_id, user_id, name, category, created_at / maintenance_id,
 // asset_id, user_id, type). "asset.updated" es un evento aparte, para
 // vault-ai-service, con un payload distinto -- no lo consume este servicio.
+//
+// payment/ publica "order.confirmed" (ConfirmOrderUseCase.go, al liberar el
+// escrow) via eventbus.Publisher.PublishOrderEvent, con order_id/asset_id/
+// buyer_id/seller_id.
 const amqp = require('amqplib');
 const crypto = require('crypto');
 
@@ -30,6 +34,20 @@ function generateMaintenanceHash(maintenance) {
   const payload = JSON.stringify({
     maintenance_id: maintenance.maintenance_id,
     asset_id: maintenance.asset_id,
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+// generateTransferHash -- payload debe traer los mismos campos que expone
+// eventbus.OrderEventPayload en payment/ (order_id, asset_id, buyer_id,
+// seller_id), igual que generateAssetHash/generateMaintenanceHash con sus
+// propios eventos.
+function generateTransferHash(order) {
+  const payload = JSON.stringify({
+    order_id: order.order_id,
+    asset_id: order.asset_id,
+    buyer_id: order.buyer_id,
+    seller_id: order.seller_id,
   });
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
@@ -77,9 +95,20 @@ async function startConsumer(certifyFn) {
     }
   );
 
+  // order.confirmed -- payment/ lo publica al liberar el escrow
+  // (ConfirmOrderUseCase.go), cuando el comprador confirma que recibió el
+  // artículo. Antes de esto el evento se publicaba y nadie lo consumía: la
+  // venta quedaba cobrada, pero Vara nunca se enteraba del cambio de dueño.
+  await bindQueue(channel, 'vault-blockchain.order-confirmed', 'order.confirmed', async (data) => {
+    const hash = generateTransferHash(data);
+    await certifyFn(data.asset_id, data.buyer_id, hash, 'TRANSFERRED');
+  });
+
   conn.on('close', () => console.log('[RabbitMQ] Consumer desconectado'));
 
-  console.log('[RabbitMQ] Consumer iniciado -- escuchando asset.created y maintenance.registered');
+  console.log(
+    '[RabbitMQ] Consumer iniciado -- escuchando asset.created, maintenance.registered y order.confirmed'
+  );
 }
 
 module.exports = { startConsumer };

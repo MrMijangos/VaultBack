@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,6 +16,16 @@ const (
 
 	blockchainConfirmedQueue      = "vault-api.blockchain-confirmed"
 	blockchainConfirmedRoutingKey = "blockchain.confirmed"
+
+	// "subscription.*" -- un solo binding con wildcard cubre los cinco
+	// event_type que payment/ publica (activated/renewed/failed/canceled/
+	// expiring, ver payment/src/core/eventbus/Publisher.go) sin declarar
+	// una cola por cada uno.
+	subscriptionEventsQueue      = "vault-api.subscription-events"
+	subscriptionEventsRoutingKey = "subscription.*"
+
+	orderConfirmedQueue      = "vault-api.order-confirmed"
+	orderConfirmedRoutingKey = "order.confirmed"
 )
 
 // nlpAnalyzedPayload es el resultado que vault-ai-service publica tras
@@ -219,5 +230,232 @@ func handleBlockchainConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 
 	if _, err := pool.Exec(context.Background(), query, payload.OwnerID, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion para el activo %s: %v", payload.AssetID, err)
+	}
+}
+
+// subscriptionEventPayload -- debe coincidir con
+// eventbus.SubscriptionEventPayload en payment/src/core/eventbus/Publisher.go.
+type subscriptionEventPayload struct {
+	EventType      string `json:"event_type"`
+	UserID         string `json:"user_id"`
+	SubscriptionID string `json:"subscription_id"`
+}
+
+// StartSubscriptionEventsConsumer escucha subscription.* (payment/publica
+// activated/renewed/failed/canceled/expiring al crear, renovar, fallar o
+// cancelar una suscripción -- HandleStripeWebhookUseCase.go y
+// CreateSubscriptionUseCase.go) y crea la notificación correspondiente.
+// Antes de esto el evento se publicaba pero nadie lo consumía: un usuario
+// al que Stripe le cancelaba la suscripción (o le fallaba la renovación)
+// no se enteraba por ningún lado dentro de la app.
+func StartSubscriptionEventsConsumer(url string, pool *pgxpool.Pool) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir subscription.*: %v", err)
+		return
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Printf("[eventbus] no se pudo abrir canal para consumir subscription.*: %v", err)
+		conn.Close()
+		return
+	}
+
+	if err := ch.ExchangeDeclare(ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo declarar el exchange %s: %v", ExchangeName, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	queue, err := ch.QueueDeclare(subscriptionEventsQueue, true, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo declarar la cola %s: %v", subscriptionEventsQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	if err := ch.QueueBind(queue.Name, subscriptionEventsRoutingKey, ExchangeName, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo enlazar la cola %s: %v", subscriptionEventsQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo iniciar el consumo de %s: %v", subscriptionEventsQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	log.Printf("[eventbus] escuchando %s en la cola %s", subscriptionEventsRoutingKey, subscriptionEventsQueue)
+
+	go func() {
+		for msg := range msgs {
+			handleSubscriptionEvent(pool, msg)
+		}
+	}()
+}
+
+// subscriptionNotificationCopy traduce el event_type de payment/ al
+// subtype/título/cuerpo de la notificación. event_type desconocido
+// devuelve subtype="" -- el llamador lo descarta en vez de violar el
+// CHECK de notifications.subtype.
+func subscriptionNotificationCopy(eventType string) (subtype, title, body string) {
+	switch eventType {
+	case "subscription.activated":
+		return "suscripcion_activa", "Suscripción activada", "Tu suscripción ya está activa."
+	case "subscription.renewed":
+		return "suscripcion_renovada", "Suscripción renovada", "Tu suscripción se renovó correctamente."
+	case "subscription.failed":
+		return "suscripcion_fallida", "No se pudo cobrar tu suscripción",
+			"Actualiza tu método de pago para no perder tus anuncios activos."
+	case "subscription.canceled":
+		return "suscripcion_cancelada", "Suscripción cancelada", "Tu suscripción y tus anuncios activos se cancelaron."
+	case "subscription.expiring":
+		return "suscripcion_por_vencer", "Tu suscripción está por vencer", "Renueva pronto para no perder tus beneficios."
+	default:
+		return "", "", ""
+	}
+}
+
+func handleSubscriptionEvent(pool *pgxpool.Pool, msg amqp.Delivery) {
+	defer msg.Ack(false)
+
+	var payload subscriptionEventPayload
+	if err := json.Unmarshal(msg.Body, &payload); err != nil {
+		log.Printf("[eventbus] mensaje de evento de suscripción inválido: %v", err)
+		return
+	}
+
+	subtype, title, body := subscriptionNotificationCopy(payload.EventType)
+	if subtype == "" {
+		log.Printf("[eventbus] event_type de suscripción desconocido: %q", payload.EventType)
+		return
+	}
+
+	data, err := json.Marshal(map[string]string{"subscription_id": payload.SubscriptionID})
+	if err != nil {
+		log.Printf("[eventbus] no se pudo serializar data de la notificacion de suscripcion: %v", err)
+		return
+	}
+
+	const query = `
+		INSERT INTO notifications (user_id, type, subtype, title, body, data)
+		VALUES ($1, 'suscripcion', $2, $3, $4, $5)
+	`
+	if _, err := pool.Exec(context.Background(), query, payload.UserID, subtype, title, body, data); err != nil {
+		log.Printf("[eventbus] no se pudo crear la notificacion de suscripcion %s: %v", payload.EventType, err)
+	}
+}
+
+// orderConfirmedPayload -- debe coincidir con eventbus.OrderEventPayload en
+// payment/src/core/eventbus/Publisher.go.
+type orderConfirmedPayload struct {
+	OrderID  string `json:"order_id"`
+	BuyerID  string `json:"buyer_id"`
+	SellerID string `json:"seller_id"`
+	AssetID  string `json:"asset_id"`
+}
+
+// StartOrderConfirmedConsumer escucha order.confirmed (payment/ lo publica
+// en ConfirmOrderUseCase.go al liberar el escrow) y transfiere la propiedad
+// real del activo al comprador -- antes de esto solo quedaba el certificado
+// en Vara (ver vault-blockchain/rabbitmq_consumer.js), pero el activo
+// seguía apareciendo en el perfil del vendedor original en la propia app.
+func StartOrderConfirmedConsumer(url string, pool *pgxpool.Pool) {
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir order.confirmed: %v", err)
+		return
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Printf("[eventbus] no se pudo abrir canal para consumir order.confirmed: %v", err)
+		conn.Close()
+		return
+	}
+
+	if err := ch.ExchangeDeclare(ExchangeName, "topic", true, false, false, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo declarar el exchange %s: %v", ExchangeName, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	queue, err := ch.QueueDeclare(orderConfirmedQueue, true, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo declarar la cola %s: %v", orderConfirmedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	if err := ch.QueueBind(queue.Name, orderConfirmedRoutingKey, ExchangeName, false, nil); err != nil {
+		log.Printf("[eventbus] no se pudo enlazar la cola %s: %v", orderConfirmedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	msgs, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo iniciar el consumo de %s: %v", orderConfirmedQueue, err)
+		ch.Close()
+		conn.Close()
+		return
+	}
+
+	log.Printf("[eventbus] escuchando %s en la cola %s", orderConfirmedRoutingKey, orderConfirmedQueue)
+
+	go func() {
+		for msg := range msgs {
+			handleOrderConfirmed(pool, msg)
+		}
+	}()
+}
+
+func handleOrderConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
+	defer msg.Ack(false)
+
+	var payload orderConfirmedPayload
+	if err := json.Unmarshal(msg.Body, &payload); err != nil {
+		log.Printf("[eventbus] mensaje order.confirmed inválido: %v", err)
+		return
+	}
+
+	// El activo deja de estar "en venta" bajo el nuevo dueño -- se limpia
+	// junto con la transferencia en la misma sentencia, no en un paso aparte.
+	const transferQuery = `
+		UPDATE assets
+		SET user_id = $1, is_for_sale = false, sale_price = NULL, sale_description = NULL
+		WHERE id = $2
+		RETURNING name
+	`
+	var assetName string
+	if err := pool.QueryRow(context.Background(), transferQuery, payload.BuyerID, payload.AssetID).Scan(&assetName); err != nil {
+		log.Printf("[eventbus] no se pudo transferir la propiedad del activo %s: %v", payload.AssetID, err)
+		return
+	}
+
+	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
+	if err != nil {
+		log.Printf("[eventbus] no se pudo serializar data de la notificacion de compra: %v", err)
+		return
+	}
+
+	const notifyQuery = `
+		INSERT INTO notifications (user_id, type, subtype, title, body, data)
+		VALUES ($1, 'venta', 'nueva_compra', $2, $3, $4)
+	`
+	title := "Compra confirmada"
+	body := fmt.Sprintf("Ya eres el dueño de %s. Puedes ver su certificado en Vara desde su detalle.", assetName)
+	if _, err := pool.Exec(context.Background(), notifyQuery, payload.BuyerID, title, body, data); err != nil {
+		log.Printf("[eventbus] no se pudo crear la notificacion de compra para el activo %s: %v", payload.AssetID, err)
 	}
 }

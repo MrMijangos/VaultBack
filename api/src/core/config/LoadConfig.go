@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -38,6 +39,11 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.CORSOrigin == "" {
 		cfg.CORSOrigin = "*"
+		// Con "*" el middleware CORS (ver core/middleware/CORS.go) no manda
+		// Allow-Credentials -- cualquier login/flujo que dependa de la
+		// cookie de sesión desde un navegador no va a funcionar hasta que
+		// se configure el origen real acá.
+		log.Println("advertencia: CORS_ORIGIN no configurado, usando \"*\" -- el login por cookie desde un navegador no funcionará hasta que se fije un origen real")
 	}
 	if cfg.RabbitMQURL == "" {
 		cfg.RabbitMQURL = "amqp://guest:guest@localhost:5672/"
