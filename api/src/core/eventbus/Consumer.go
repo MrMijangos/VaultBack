@@ -533,6 +533,16 @@ func handleOrderCreated(pool *pgxpool.Pool, msg amqp.Delivery) {
 		return
 	}
 
+	// El activo deja de listarse en el Shop en cuanto se paga (no hasta que
+	// el comprador confirme recibido) -- antes seguía apareciendo "en venta"
+	// durante todo el tránsito (retenido/enviado), pudiendo venderse dos
+	// veces. La transferencia real de dueño sigue pasando en
+	// handleOrderConfirmed, esto solo lo saca del catálogo.
+	const hideQuery = `UPDATE assets SET is_for_sale = false WHERE id = $1`
+	if _, err := pool.Exec(context.Background(), hideQuery, payload.AssetID); err != nil {
+		log.Printf("[eventbus] no se pudo ocultar el activo %s del catálogo: %v", payload.AssetID, err)
+	}
+
 	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
 	if err != nil {
 		log.Printf("[eventbus] no se pudo serializar data de la notificacion de venta nueva: %v", err)
