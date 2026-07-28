@@ -206,6 +206,37 @@ func (r *PostgreSQLPostRepository) Unsave(ctx context.Context, postID string, us
 	return nil
 }
 
+func (r *PostgreSQLPostRepository) FindLikedPostIDs(ctx context.Context, postIDs []string, userID string) (map[string]bool, error) {
+	return r.findMarkedPostIDs(ctx, "post_likes", postIDs, userID)
+}
+
+func (r *PostgreSQLPostRepository) FindSavedPostIDs(ctx context.Context, postIDs []string, userID string) (map[string]bool, error) {
+	return r.findMarkedPostIDs(ctx, "saved_posts", postIDs, userID)
+}
+
+func (r *PostgreSQLPostRepository) findMarkedPostIDs(ctx context.Context, table string, postIDs []string, userID string) (map[string]bool, error) {
+	marked := make(map[string]bool)
+	if len(postIDs) == 0 || userID == "" {
+		return marked, nil
+	}
+
+	query := fmt.Sprintf(`SELECT post_id FROM %s WHERE user_id = $1 AND post_id = ANY($2)`, table)
+	rows, err := r.pool.Query(ctx, query, userID, postIDs)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo consultar %s: %w", table, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var postID string
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("no se pudo leer %s: %w", table, err)
+		}
+		marked[postID] = true
+	}
+	return marked, rows.Err()
+}
+
 func (r *PostgreSQLPostRepository) FindSavedByUser(ctx context.Context, userID string) ([]entities.Post, error) {
 	query := selectPostsQuery + `
 		JOIN saved_posts sp ON sp.post_id = p.id

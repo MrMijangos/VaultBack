@@ -46,6 +46,32 @@ func RequireAuth(secret string) func(http.Handler) http.Handler {
 	}
 }
 
+// OptionalAuth intenta identificar al usuario si manda un token válido, pero
+// nunca rechaza la petición si no lo manda o si es inválido -- para rutas
+// públicas (como el feed) que igual necesitan saber "quién pregunta" para
+// devolver datos personalizados (is_liked/is_saved) sin dejar de ser
+// navegables sin sesión.
+func OptionalAuth(secret string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token := tokenFromRequest(r)
+			if token == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			claims, err := ParseToken(token, secret)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), claimsContextKey, claims)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 func ClaimsFromContext(ctx context.Context) (*Claims, bool) {
 	claims, ok := ctx.Value(claimsContextKey).(*Claims)
 	return claims, ok

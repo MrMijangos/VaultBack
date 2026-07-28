@@ -22,4 +22,10 @@ type PostRepository interface {
 	Save(ctx context.Context, postID string, userID string) error
 	Unsave(ctx context.Context, postID string, userID string) error
 	FindSavedByUser(ctx context.Context, userID string) ([]entities.Post, error)
+	// FindLikedPostIDs/FindSavedPostIDs devuelven, de entre postIDs, cuáles
+	// tiene marcados userID -- una sola consulta por lote en vez de una por
+	// post, para poder personalizar listados (feed, guardados) según quién
+	// pregunta sin decenas de queries extra.
+	FindLikedPostIDs(ctx context.Context, postIDs []string, userID string) (map[string]bool, error)
+	FindSavedPostIDs(ctx context.Context, postIDs []string, userID string) (map[string]bool, error)
 }

@@ -13,12 +13,13 @@ import (
 )
 
 type CreatePostUseCase struct {
-	repo       repositories.PostRepository
-	moderation *moderation.Client
+	repo        repositories.PostRepository
+	moderation  *moderation.Client
+	assetPhotos repositories.AssetPhotoProvider
 }
 
-func NewCreatePostUseCase(repo repositories.PostRepository, moderationClient *moderation.Client) *CreatePostUseCase {
-	return &CreatePostUseCase{repo: repo, moderation: moderationClient}
+func NewCreatePostUseCase(repo repositories.PostRepository, moderationClient *moderation.Client, assetPhotos repositories.AssetPhotoProvider) *CreatePostUseCase {
+	return &CreatePostUseCase{repo: repo, moderation: moderationClient, assetPhotos: assetPhotos}
 }
 
 func (uc *CreatePostUseCase) Execute(ctx context.Context, userID string, req request.CreatePostRequest) (response.PostResponse, error) {
@@ -55,5 +56,25 @@ func (uc *CreatePostUseCase) Execute(ctx context.Context, userID string, req req
 		return response.PostResponse{}, err
 	}
 
-	return response.FromEntity(created, nil), nil
+	// "Publicar en el Feed" desde un activo manda asset_id sin ninguna foto
+	// propia (vault-app solo re-sube fotos para posts creados desde cero) --
+	// sin esto, el post quedaba siempre sin imagen aunque el activo sí
+	// tuviera fotos. Se copian las URLs ya existentes en Cloudinary, no hace
+	// falta volver a subir el archivo.
+	var photos []entities.PostPhoto
+	if assetID != nil {
+		assetPhotos, err := uc.assetPhotos.FindPhotosByAssetID(ctx, *assetID)
+		if err != nil {
+			return response.PostResponse{}, err
+		}
+		for _, ap := range assetPhotos {
+			added, err := uc.repo.AddPhoto(ctx, postID, ap.URL)
+			if err != nil {
+				return response.PostResponse{}, err
+			}
+			photos = append(photos, added)
+		}
+	}
+
+	return response.FromEntity(created, photos), nil
 }

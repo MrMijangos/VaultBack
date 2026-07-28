@@ -25,6 +25,11 @@ type PostResponse struct {
 	AuthorName      string              `json:"author_name"`
 	AuthorAvatarURL string              `json:"author_avatar_url"`
 	CommentsCount   int                 `json:"comments_count"`
+	// IsLiked/IsSaved son relativos a quien pregunta -- false por defecto
+	// (visitante anónimo o sin sesión); GetAllPostsUseCase/GetSavedPostsUseCase
+	// los llenan aparte cuando sí hay un usuario identificado.
+	IsLiked bool `json:"is_liked"`
+	IsSaved bool `json:"is_saved"`
 }
 
 func FromEntity(p entities.Post, photos []entities.PostPhoto) PostResponse {

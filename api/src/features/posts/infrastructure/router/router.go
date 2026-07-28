@@ -23,9 +23,10 @@ func RegisterRoutes(
 	jwtSecret string,
 ) {
 	auth := security.RequireAuth(jwtSecret)
+	optionalAuth := security.OptionalAuth(jwtSecret)
 
 	mux.Handle("POST /api/v1/posts", auth(http.HandlerFunc(createPost.Handle)))
-	mux.HandleFunc("GET /api/v1/posts", getAllPosts.Handle)
+	mux.Handle("GET /api/v1/posts", optionalAuth(http.HandlerFunc(getAllPosts.Handle)))
 	// Literal más específico que /posts/{id} -- net/http (Go 1.22+) le da
 	// prioridad sin importar el orden de registro, pero se deja aquí junto
 	// a los otros /posts/{...} por legibilidad.

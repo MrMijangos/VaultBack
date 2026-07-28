@@ -5,6 +5,7 @@ import (
 
 	"vault/src/core/cloudinary"
 	"vault/src/core/moderation"
+	assetAdapters "vault/src/features/assets/infrastructure/adapters"
 	"vault/src/features/posts/application"
 	"vault/src/features/posts/infrastructure/adapters"
 	"vault/src/features/posts/infrastructure/controllers"
@@ -12,7 +13,8 @@ import (
 
 func BuildCreatePostController(pool *pgxpool.Pool, moderationClient *moderation.Client) *controllers.CreatePostController {
 	repo := adapters.NewPostgreSQLPostRepository(pool)
-	useCase := application.NewCreatePostUseCase(repo, moderationClient)
+	assetPhotos := assetAdapters.NewPostgreSQLAssetRepository(pool)
+	useCase := application.NewCreatePostUseCase(repo, moderationClient, assetPhotos)
 	return controllers.NewCreatePostController(useCase)
 }
 
