@@ -39,6 +39,7 @@ async function certifyInBackground(assetId, ownerId, assetHash, action) {
 
     await publisher.publish('blockchain.confirmed', {
       asset_id: assetId,
+      owner_id: ownerId,
       tx_id: txId,
       confirmed_at: confirmedAt,
       action,
