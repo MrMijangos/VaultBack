@@ -36,3 +36,15 @@ func BuildGetConversationsController(pool *pgxpool.Pool) *controllers.GetConvers
 	useCase := application.NewGetConversationsUseCase(repo)
 	return controllers.NewGetConversationsController(useCase)
 }
+
+func BuildDeleteChatMessageController(pool *pgxpool.Pool) *controllers.DeleteChatMessageController {
+	repo := adapters.NewPostgreSQLChatMessageRepository(pool)
+	useCase := application.NewDeleteChatMessageUseCase(repo)
+	return controllers.NewDeleteChatMessageController(useCase)
+}
+
+func BuildDeleteConversationController(pool *pgxpool.Pool) *controllers.DeleteConversationController {
+	repo := adapters.NewPostgreSQLChatMessageRepository(pool)
+	useCase := application.NewDeleteConversationUseCase(repo)
+	return controllers.NewDeleteConversationController(useCase)
+}

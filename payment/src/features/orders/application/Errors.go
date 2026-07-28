@@ -10,4 +10,5 @@ var (
 	ErrNotHeld            = errors.New("esta orden ya fue liberada o no está retenida")
 	ErrNotSeller          = errors.New("esta orden no te pertenece")
 	ErrNotShipped         = errors.New("esta orden todavía no fue enviada por el vendedor")
+	ErrSelfPurchase       = errors.New("no puedes comprar tu propio producto")
 )

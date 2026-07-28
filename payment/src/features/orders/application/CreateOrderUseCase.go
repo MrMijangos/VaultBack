@@ -48,6 +48,9 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, buyerID string, req r
 	if req.SellerID == "" || req.AssetID == "" || req.AmountCents <= 0 || req.BuyerEmail == "" || req.PaymentMethodID == "" {
 		return nil, ErrInvalidRequest
 	}
+	if buyerID == req.SellerID {
+		return nil, ErrSelfPurchase
+	}
 
 	_, ready, err := uc.accountProvider.GetChargesEnabledAccountID(ctx, req.SellerID)
 	if err != nil {

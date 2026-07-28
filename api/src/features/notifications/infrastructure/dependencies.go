@@ -26,6 +26,12 @@ func BuildMarkNotificationAsReadController(pool *pgxpool.Pool) *controllers.Mark
 	return controllers.NewMarkNotificationAsReadController(useCase)
 }
 
+func BuildMarkAllNotificationsAsReadController(pool *pgxpool.Pool) *controllers.MarkAllNotificationsAsReadController {
+	repo := adapters.NewPostgreSQLNotificationRepository(pool)
+	useCase := application.NewMarkAllNotificationsAsReadUseCase(repo)
+	return controllers.NewMarkAllNotificationsAsReadController(useCase)
+}
+
 func BuildDeleteNotificationController(pool *pgxpool.Pool) *controllers.DeleteNotificationController {
 	repo := adapters.NewPostgreSQLNotificationRepository(pool)
 	useCase := application.NewDeleteNotificationUseCase(repo)

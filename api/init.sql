@@ -316,6 +316,12 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 -- (su privada no destraba una llave cifrada para la pública ajena).
 ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS encrypted_aes_key_sender text;
 
+-- "Eliminar" un mensaje/conversación es solo para quien lo borra -- la otra
+-- persona lo sigue viendo. Como cada fila es un único mensaje compartido
+-- entre ambos, no se puede borrar la fila sin afectar al otro lado.
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS deleted_by_sender boolean NOT NULL DEFAULT false;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS deleted_by_recipient boolean NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
 	ON chat_messages (LEAST(sender_id, recipient_id), GREATEST(sender_id, recipient_id), created_at);
 

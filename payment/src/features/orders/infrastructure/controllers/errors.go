@@ -12,6 +12,8 @@ func statusForError(err error) int {
 	switch {
 	case errors.Is(err, application.ErrInvalidRequest):
 		return http.StatusBadRequest
+	case errors.Is(err, application.ErrSelfPurchase):
+		return http.StatusForbidden
 	case errors.Is(err, application.ErrSellerNotOnboarded):
 		return http.StatusConflict
 	case errors.Is(err, application.ErrOrderNotFound):

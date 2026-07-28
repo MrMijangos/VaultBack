@@ -232,6 +232,8 @@ func main() {
 		chatInfra.BuildGetConversationMessagesController(pool),
 		chatInfra.BuildUpdateChatMessageStatusController(pool),
 		chatInfra.BuildGetConversationsController(pool),
+		chatInfra.BuildDeleteChatMessageController(pool),
+		chatInfra.BuildDeleteConversationController(pool),
 		cfg.JWTSecret,
 	)
 
@@ -249,6 +251,7 @@ func main() {
 		notificationsInfra.BuildCreateNotificationController(pool),
 		notificationsInfra.BuildGetMyNotificationsController(pool),
 		notificationsInfra.BuildMarkNotificationAsReadController(pool),
+		notificationsInfra.BuildMarkAllNotificationsAsReadController(pool),
 		notificationsInfra.BuildDeleteNotificationController(pool),
 		cfg.JWTSecret,
 	)

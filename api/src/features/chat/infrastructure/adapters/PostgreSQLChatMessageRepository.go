@@ -53,12 +53,13 @@ func (r *PostgreSQLChatMessageRepository) Create(ctx context.Context, message en
 	return created, nil
 }
 
-func (r *PostgreSQLChatMessageRepository) FindConversation(ctx context.Context, userA string, userB string) ([]entities.ChatMessage, error) {
+func (r *PostgreSQLChatMessageRepository) FindConversation(ctx context.Context, meID string, otherID string) ([]entities.ChatMessage, error) {
 	const query = selectChatMessagesQuery + `
-		WHERE (sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1)
+		WHERE ((sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1))
+		  AND NOT ((sender_id = $1 AND deleted_by_sender) OR (recipient_id = $1 AND deleted_by_recipient))
 		ORDER BY created_at
 	`
-	rows, err := r.pool.Query(ctx, query, userA, userB)
+	rows, err := r.pool.Query(ctx, query, meID, otherID)
 	if err != nil {
 		return nil, fmt.Errorf("no se pudo obtener la conversacion: %w", err)
 	}
@@ -90,12 +91,13 @@ func (r *PostgreSQLChatMessageRepository) FindConversationsForUser(ctx context.C
 					ORDER BY created_at DESC
 				) AS rn
 			FROM chat_messages
-			WHERE sender_id = $1 OR recipient_id = $1
+			WHERE (sender_id = $1 OR recipient_id = $1)
+			  AND NOT ((sender_id = $1 AND deleted_by_sender) OR (recipient_id = $1 AND deleted_by_recipient))
 		),
 		unread AS (
 			SELECT sender_id AS other_user_id, COUNT(*) AS unread_count
 			FROM chat_messages
-			WHERE recipient_id = $1 AND status <> 'read'
+			WHERE recipient_id = $1 AND status <> 'read' AND NOT deleted_by_recipient
 			GROUP BY sender_id
 		)
 		SELECT
@@ -154,4 +156,34 @@ func (r *PostgreSQLChatMessageRepository) UpdateStatus(ctx context.Context, id s
 		return entities.ChatMessage{}, fmt.Errorf("no se pudo leer el mensaje actualizado: %w", err)
 	}
 	return updated, nil
+}
+
+func (r *PostgreSQLChatMessageRepository) DeleteMessage(ctx context.Context, id string, userID string) error {
+	const query = `
+		UPDATE chat_messages
+		SET deleted_by_sender = CASE WHEN sender_id = $2 THEN true ELSE deleted_by_sender END,
+		    deleted_by_recipient = CASE WHEN recipient_id = $2 THEN true ELSE deleted_by_recipient END
+		WHERE id = $1 AND (sender_id = $2 OR recipient_id = $2)
+	`
+	tag, err := r.pool.Exec(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("no se pudo eliminar el mensaje: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return repositories.ErrChatMessageNotFound
+	}
+	return nil
+}
+
+func (r *PostgreSQLChatMessageRepository) DeleteConversation(ctx context.Context, userID string, otherID string) error {
+	const query = `
+		UPDATE chat_messages
+		SET deleted_by_sender = CASE WHEN sender_id = $1 THEN true ELSE deleted_by_sender END,
+		    deleted_by_recipient = CASE WHEN recipient_id = $1 THEN true ELSE deleted_by_recipient END
+		WHERE (sender_id = $1 AND recipient_id = $2) OR (sender_id = $2 AND recipient_id = $1)
+	`
+	if _, err := r.pool.Exec(ctx, query, userID, otherID); err != nil {
+		return fmt.Errorf("no se pudo eliminar la conversacion: %w", err)
+	}
+	return nil
 }

@@ -12,6 +12,7 @@ func RegisterRoutes(
 	createNotification *controllers.CreateNotificationController,
 	getMyNotifications *controllers.GetMyNotificationsController,
 	markAsRead *controllers.MarkNotificationAsReadController,
+	markAllAsRead *controllers.MarkAllNotificationsAsReadController,
 	deleteNotification *controllers.DeleteNotificationController,
 	jwtSecret string,
 ) {
@@ -19,6 +20,7 @@ func RegisterRoutes(
 
 	mux.Handle("POST /api/v1/notifications", auth(http.HandlerFunc(createNotification.Handle)))
 	mux.Handle("GET /api/v1/notifications", auth(http.HandlerFunc(getMyNotifications.Handle)))
+	mux.Handle("PUT /api/v1/notifications/read-all", auth(http.HandlerFunc(markAllAsRead.Handle)))
 	mux.Handle("PUT /api/v1/notifications/{id}/read", auth(http.HandlerFunc(markAsRead.Handle)))
 	mux.Handle("DELETE /api/v1/notifications/{id}", auth(http.HandlerFunc(deleteNotification.Handle)))
 }

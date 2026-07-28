@@ -84,6 +84,13 @@ func (r *PostgreSQLNotificationRepository) MarkAsRead(ctx context.Context, id st
 	return n, nil
 }
 
+func (r *PostgreSQLNotificationRepository) MarkAllAsRead(ctx context.Context, userID string) error {
+	if _, err := r.pool.Exec(ctx, `UPDATE notifications SET read = true WHERE user_id = $1 AND read = false`, userID); err != nil {
+		return fmt.Errorf("no se pudieron marcar como leidas: %w", err)
+	}
+	return nil
+}
+
 func (r *PostgreSQLNotificationRepository) Delete(ctx context.Context, id string, userID string) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM notifications WHERE id = $1 AND user_id = $2`, id, userID)
 	if err != nil {
