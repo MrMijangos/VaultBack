@@ -34,6 +34,8 @@ import (
 	notificationsRouter "vault/src/features/notifications/infrastructure/router"
 	postsInfra "vault/src/features/posts/infrastructure"
 	postsRouter "vault/src/features/posts/infrastructure/router"
+	recommendationsInfra "vault/src/features/recommendations/infrastructure"
+	recommendationsRouter "vault/src/features/recommendations/infrastructure/router"
 	restorerprofilesInfra "vault/src/features/restorerprofiles/infrastructure"
 	restorerprofilesRouter "vault/src/features/restorerprofiles/infrastructure/router"
 	reviewsInfra "vault/src/features/reviews/infrastructure"
@@ -230,6 +232,15 @@ func main() {
 		chatInfra.BuildGetConversationMessagesController(pool),
 		chatInfra.BuildUpdateChatMessageStatusController(pool),
 		chatInfra.BuildGetConversationsController(pool),
+		cfg.JWTSecret,
+	)
+
+	// Recomendaciones (ML): reutiliza cfg.NLPServiceURL porque es el mismo
+	// vault-ai-service que ya se usa para moderación de NLP, solo que aquí
+	// se llama a /api/v1/ml/recommend-items en vez de /api/v1/nlp/analyze.
+	recommendationsRouter.RegisterRoutes(
+		mux,
+		recommendationsInfra.BuildGetRecommendationsController(cfg.NLPServiceURL),
 		cfg.JWTSecret,
 	)
 
