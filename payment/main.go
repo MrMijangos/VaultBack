@@ -49,6 +49,7 @@ func main() {
 	adRepo := adsAdapters.NewPostgreSQLAdRepository(pool)
 	connectedAccountRepo := connectAdapters.NewPostgreSQLConnectedAccountRepository(pool)
 	orderRepo := ordersAdapters.NewPostgreSQLOrderRepository(pool)
+	assetPriceProvider := ordersAdapters.NewHTTPAssetPriceProvider(cfg.VaultAPIURL)
 
 	adDeactivator := adsAdapters.NewAdDeactivator(adRepo)
 	subscriptionInfoProvider := subscriptionsAdapters.NewSubscriptionInfoAdapter(subscriptionRepo, planRepo)
@@ -123,7 +124,7 @@ func main() {
 	ordersRouter.RegisterRoutes(
 		api,
 		cfg.JWTSecret,
-		ordersInfra.BuildCreateOrderController(orderRepo, sellerCommissionProvider, sellerAccountProvider, stripeClient, publisher),
+		ordersInfra.BuildCreateOrderController(orderRepo, sellerCommissionProvider, sellerAccountProvider, assetPriceProvider, stripeClient, publisher),
 		ordersInfra.BuildConfirmOrderController(orderRepo, sellerAccountProvider, stripeClient, publisher),
 		ordersInfra.BuildGetOrderController(orderRepo),
 		ordersInfra.BuildShipOrderController(orderRepo, publisher),

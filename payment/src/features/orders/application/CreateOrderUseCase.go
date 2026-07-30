@@ -24,6 +24,7 @@ type CreateOrderUseCase struct {
 	orderRepo          repositories.OrderRepository
 	commissionProvider repositories.SellerCommissionProvider
 	accountProvider    repositories.SellerAccountProvider
+	assetPrices        repositories.AssetPriceProvider
 	stripeClient       stripeclient.Client
 	publisher          eventbus.Publisher
 }
@@ -32,6 +33,7 @@ func NewCreateOrderUseCase(
 	orderRepo repositories.OrderRepository,
 	commissionProvider repositories.SellerCommissionProvider,
 	accountProvider repositories.SellerAccountProvider,
+	assetPrices repositories.AssetPriceProvider,
 	stripeClient stripeclient.Client,
 	publisher eventbus.Publisher,
 ) *CreateOrderUseCase {
@@ -39,17 +41,31 @@ func NewCreateOrderUseCase(
 		orderRepo:          orderRepo,
 		commissionProvider: commissionProvider,
 		accountProvider:    accountProvider,
+		assetPrices:        assetPrices,
 		stripeClient:       stripeClient,
 		publisher:          publisher,
 	}
 }
 
 func (uc *CreateOrderUseCase) Execute(ctx context.Context, buyerID string, req request.CreateOrderRequest) (*response.OrderResponse, error) {
-	if req.SellerID == "" || req.AssetID == "" || req.AmountCents <= 0 || req.BuyerEmail == "" || req.PaymentMethodID == "" {
+	if req.SellerID == "" || req.AssetID == "" || req.BuyerEmail == "" || req.PaymentMethodID == "" {
 		return nil, ErrInvalidRequest
 	}
 	if buyerID == req.SellerID {
 		return nil, ErrSelfPurchase
+	}
+
+	// El monto a cobrar SIEMPRE se recalcula del lado del servidor a partir
+	// del precio real del activo -- antes se cobraba tal cual el
+	// amount_cents que mandara el cliente, así que cualquiera podía
+	// interceptar la petición y comprar un activo por el precio que
+	// quisiera.
+	priceCents, isForSale, err := uc.assetPrices.GetSalePriceCents(ctx, req.AssetID)
+	if err != nil {
+		return nil, err
+	}
+	if !isForSale || priceCents <= 0 {
+		return nil, ErrAssetNotForSale
 	}
 
 	_, ready, err := uc.accountProvider.GetChargesEnabledAccountID(ctx, req.SellerID)
@@ -70,20 +86,20 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, buyerID string, req r
 		return nil, fmt.Errorf("no se pudo registrar el método de pago: %w", err)
 	}
 
-	paymentIntentID, err := uc.stripeClient.ChargeBuyer(ctx, customerID, attachedPaymentMethodID, req.AmountCents, currency)
+	paymentIntentID, err := uc.stripeClient.ChargeBuyer(ctx, customerID, attachedPaymentMethodID, priceCents, currency)
 	if err != nil {
 		return nil, fmt.Errorf("no se pudo cobrar al comprador: %w", err)
 	}
 
-	commissionCents := int64(math.Round(float64(req.AmountCents) * rate))
-	sellerAmountCents := req.AmountCents - commissionCents
+	commissionCents := int64(math.Round(float64(priceCents) * rate))
+	sellerAmountCents := priceCents - commissionCents
 
 	order := &entities.Order{
 		ID:                    uuid.NewString(),
 		BuyerID:               buyerID,
 		SellerID:              req.SellerID,
 		AssetID:               req.AssetID,
-		AmountCents:           req.AmountCents,
+		AmountCents:           priceCents,
 		CommissionCents:       commissionCents,
 		SellerAmountCents:     sellerAmountCents,
 		Currency:              currency,

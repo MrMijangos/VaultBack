@@ -12,10 +12,11 @@ func BuildCreateOrderController(
 	orderRepo repositories.OrderRepository,
 	commissionProvider repositories.SellerCommissionProvider,
 	accountProvider repositories.SellerAccountProvider,
+	assetPrices repositories.AssetPriceProvider,
 	stripeClient stripeclient.Client,
 	publisher eventbus.Publisher,
 ) *controllers.CreateOrderController {
-	useCase := application.NewCreateOrderUseCase(orderRepo, commissionProvider, accountProvider, stripeClient, publisher)
+	useCase := application.NewCreateOrderUseCase(orderRepo, commissionProvider, accountProvider, assetPrices, stripeClient, publisher)
 	return controllers.NewCreateOrderController(useCase)
 }
 

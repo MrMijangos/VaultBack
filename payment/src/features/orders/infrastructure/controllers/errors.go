@@ -6,6 +6,7 @@ import (
 
 	"vault-payment/src/core/stripeclient"
 	"vault-payment/src/features/orders/application"
+	"vault-payment/src/features/orders/infrastructure/adapters"
 )
 
 func statusForError(err error) int {
@@ -14,6 +15,10 @@ func statusForError(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, application.ErrSelfPurchase):
 		return http.StatusForbidden
+	case errors.Is(err, application.ErrAssetNotForSale):
+		return http.StatusConflict
+	case errors.Is(err, adapters.ErrAssetNotFound):
+		return http.StatusNotFound
 	case errors.Is(err, application.ErrSellerNotOnboarded):
 		return http.StatusConflict
 	case errors.Is(err, application.ErrOrderNotFound):

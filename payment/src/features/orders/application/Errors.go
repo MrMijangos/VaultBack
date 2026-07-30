@@ -11,4 +11,5 @@ var (
 	ErrNotSeller          = errors.New("esta orden no te pertenece")
 	ErrNotShipped         = errors.New("esta orden todavía no fue enviada por el vendedor")
 	ErrSelfPurchase       = errors.New("no puedes comprar tu propio producto")
+	ErrAssetNotForSale    = errors.New("el activo ya no está en venta")
 )

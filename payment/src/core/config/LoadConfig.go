@@ -26,6 +26,7 @@ func LoadConfig() (*Config, error) {
 		DBPassword:          os.Getenv("DB_PASSWORD"),
 		DBName:              os.Getenv("DB_NAME"),
 		DBSSL:               os.Getenv("DB_SSL"),
+		VaultAPIURL:         os.Getenv("VAULT_API_URL"),
 	}
 
 	if cfg.AppPort == "" {
@@ -39,6 +40,14 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.RabbitMQURL == "" {
 		cfg.RabbitMQURL = "amqp://guest:guest@localhost:5672/"
+	}
+	if cfg.VaultAPIURL == "" {
+		// api/ y payment/ corren como dos servicios separados; en local
+		// ambos arrancan con docker-compose en la misma red. Se usa para
+		// consultar el precio real de un activo antes de cobrar (ver
+		// HTTPAssetPriceProvider) -- sin esto, CreateOrderUseCase tendría
+		// que confiar en el monto que mande el cliente.
+		cfg.VaultAPIURL = "http://localhost:8080"
 	}
 
 	// JWT_SECRET es obligatoria: sin ella no se puede validar ningún token, y

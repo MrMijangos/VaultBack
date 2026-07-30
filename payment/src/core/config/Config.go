@@ -16,6 +16,7 @@ type Config struct {
 	DBPassword          string
 	DBName              string
 	DBSSL               string
+	VaultAPIURL         string
 }
 
 // StripeConfigured indica si hay claves reales de Stripe cargadas. Mientras
