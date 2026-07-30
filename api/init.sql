@@ -277,7 +277,25 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
 
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_subtype_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_subtype_check
-	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer']::text[]));
+	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer', 'comentario_nuevo']::text[]));
+
+-- Un usuario puede tener varios dispositivos (o reinstalar la app), así que
+-- token es único globalmente en vez de único por (user_id, token): si el
+-- mismo token llega asociado a otro user_id (reinstalación con otra cuenta),
+-- el INSERT ON CONFLICT lo reasigna en vez de dejar el token huérfano
+-- apuntando al dueño anterior (ver PostgreSQLFCMTokenRepository.Register).
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	user_id uuid NOT NULL,
+	token text NOT NULL UNIQUE,
+	platform character varying,
+	created_at timestamp without time zone DEFAULT now(),
+	updated_at timestamp without time zone DEFAULT now(),
+	CONSTRAINT fcm_tokens_pkey PRIMARY KEY (id),
+	CONSTRAINT fcm_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_fcm_tokens_user_id ON fcm_tokens (user_id);
 
 CREATE TABLE IF NOT EXISTS addresses (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),

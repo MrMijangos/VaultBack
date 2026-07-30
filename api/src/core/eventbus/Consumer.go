@@ -8,6 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"vault/src/core/push"
 )
 
 const (
@@ -159,7 +161,7 @@ type blockchainConfirmedPayload struct {
 // avisarle a realtime/ por pg_notify para el push por WebSocket. Mismo
 // criterio que StartNLPAnalyzedConsumer: si RabbitMQ no está disponible, no
 // bloquea el arranque de la API.
-func StartBlockchainConfirmedConsumer(url string, pool *pgxpool.Pool) {
+func StartBlockchainConfirmedConsumer(url string, pool *pgxpool.Pool, sender push.Sender) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir blockchain.confirmed: %v", err)
@@ -207,12 +209,12 @@ func StartBlockchainConfirmedConsumer(url string, pool *pgxpool.Pool) {
 
 	go func() {
 		for msg := range msgs {
-			handleBlockchainConfirmed(pool, msg)
+			handleBlockchainConfirmed(pool, sender, msg)
 		}
 	}()
 }
 
-func handleBlockchainConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
+func handleBlockchainConfirmed(pool *pgxpool.Pool, sender push.Sender, msg amqp.Delivery) {
 	defer msg.Ack(false)
 
 	var payload blockchainConfirmedPayload
@@ -221,7 +223,8 @@ func handleBlockchainConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 		return
 	}
 
-	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "tx_id": payload.TxID})
+	dataMap := map[string]string{"asset_id": payload.AssetID, "tx_id": payload.TxID}
+	data, err := json.Marshal(dataMap)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo serializar data de la notificacion blockchain.confirmed: %v", err)
 		return
@@ -236,6 +239,12 @@ func handleBlockchainConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 
 	if _, err := pool.Exec(context.Background(), query, payload.OwnerID, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion para el activo %s: %v", payload.AssetID, err)
+		return
+	}
+
+	dataMap["type"] = "asset_verificado"
+	if err := sender.Notify(context.Background(), payload.OwnerID, title, body, dataMap); err != nil {
+		log.Printf("[eventbus] no se pudo enviar el push del activo %s: %v", payload.AssetID, err)
 	}
 }
 
@@ -254,7 +263,7 @@ type subscriptionEventPayload struct {
 // Antes de esto el evento se publicaba pero nadie lo consumía: un usuario
 // al que Stripe le cancelaba la suscripción (o le fallaba la renovación)
 // no se enteraba por ningún lado dentro de la app.
-func StartSubscriptionEventsConsumer(url string, pool *pgxpool.Pool) {
+func StartSubscriptionEventsConsumer(url string, pool *pgxpool.Pool, sender push.Sender) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir subscription.*: %v", err)
@@ -302,7 +311,7 @@ func StartSubscriptionEventsConsumer(url string, pool *pgxpool.Pool) {
 
 	go func() {
 		for msg := range msgs {
-			handleSubscriptionEvent(pool, msg)
+			handleSubscriptionEvent(pool, sender, msg)
 		}
 	}()
 }
@@ -329,7 +338,7 @@ func subscriptionNotificationCopy(eventType string) (subtype, title, body string
 	}
 }
 
-func handleSubscriptionEvent(pool *pgxpool.Pool, msg amqp.Delivery) {
+func handleSubscriptionEvent(pool *pgxpool.Pool, sender push.Sender, msg amqp.Delivery) {
 	defer msg.Ack(false)
 
 	var payload subscriptionEventPayload
@@ -344,7 +353,8 @@ func handleSubscriptionEvent(pool *pgxpool.Pool, msg amqp.Delivery) {
 		return
 	}
 
-	data, err := json.Marshal(map[string]string{"subscription_id": payload.SubscriptionID})
+	dataMap := map[string]string{"subscription_id": payload.SubscriptionID}
+	data, err := json.Marshal(dataMap)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo serializar data de la notificacion de suscripcion: %v", err)
 		return
@@ -356,6 +366,12 @@ func handleSubscriptionEvent(pool *pgxpool.Pool, msg amqp.Delivery) {
 	`
 	if _, err := pool.Exec(context.Background(), query, payload.UserID, subtype, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion de suscripcion %s: %v", payload.EventType, err)
+		return
+	}
+
+	dataMap["type"] = subtype
+	if err := sender.Notify(context.Background(), payload.UserID, title, body, dataMap); err != nil {
+		log.Printf("[eventbus] no se pudo enviar el push de suscripcion %s: %v", payload.EventType, err)
 	}
 }
 
@@ -373,7 +389,7 @@ type orderConfirmedPayload struct {
 // real del activo al comprador -- antes de esto solo quedaba el certificado
 // en Vara (ver vault-blockchain/rabbitmq_consumer.js), pero el activo
 // seguía apareciendo en el perfil del vendedor original en la propia app.
-func StartOrderConfirmedConsumer(url string, pool *pgxpool.Pool) {
+func StartOrderConfirmedConsumer(url string, pool *pgxpool.Pool, sender push.Sender) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir order.confirmed: %v", err)
@@ -421,12 +437,12 @@ func StartOrderConfirmedConsumer(url string, pool *pgxpool.Pool) {
 
 	go func() {
 		for msg := range msgs {
-			handleOrderConfirmed(pool, msg)
+			handleOrderConfirmed(pool, sender, msg)
 		}
 	}()
 }
 
-func handleOrderConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
+func handleOrderConfirmed(pool *pgxpool.Pool, sender push.Sender, msg amqp.Delivery) {
 	defer msg.Ack(false)
 
 	var payload orderConfirmedPayload
@@ -449,7 +465,8 @@ func handleOrderConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 		return
 	}
 
-	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
+	dataMap := map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID}
+	data, err := json.Marshal(dataMap)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo serializar data de la notificacion de compra: %v", err)
 		return
@@ -463,6 +480,12 @@ func handleOrderConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 	body := fmt.Sprintf("Ya eres el dueño de %s. Puedes ver su certificado en Vara desde su detalle.", assetName)
 	if _, err := pool.Exec(context.Background(), notifyQuery, payload.BuyerID, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion de compra para el activo %s: %v", payload.AssetID, err)
+		return
+	}
+
+	dataMap["type"] = "nueva_compra"
+	if err := sender.Notify(context.Background(), payload.BuyerID, title, body, dataMap); err != nil {
+		log.Printf("[eventbus] no se pudo enviar el push de compra para el activo %s: %v", payload.AssetID, err)
 	}
 }
 
@@ -471,7 +494,7 @@ func handleOrderConfirmed(pool *pgxpool.Pool, msg amqp.Delivery) {
 // vendedor de la venta nueva -- antes de esto el vendedor solo se enteraba
 // si entraba a revisar manualmente, no había notificación ni forma de ver
 // sus pedidos (ver ListMySalesUseCase.go en payment/).
-func StartOrderCreatedConsumer(url string, pool *pgxpool.Pool) {
+func StartOrderCreatedConsumer(url string, pool *pgxpool.Pool, sender push.Sender) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir order.created: %v", err)
@@ -519,12 +542,12 @@ func StartOrderCreatedConsumer(url string, pool *pgxpool.Pool) {
 
 	go func() {
 		for msg := range msgs {
-			handleOrderCreated(pool, msg)
+			handleOrderCreated(pool, sender, msg)
 		}
 	}()
 }
 
-func handleOrderCreated(pool *pgxpool.Pool, msg amqp.Delivery) {
+func handleOrderCreated(pool *pgxpool.Pool, sender push.Sender, msg amqp.Delivery) {
 	defer msg.Ack(false)
 
 	var payload orderConfirmedPayload
@@ -543,7 +566,8 @@ func handleOrderCreated(pool *pgxpool.Pool, msg amqp.Delivery) {
 		log.Printf("[eventbus] no se pudo ocultar el activo %s del catálogo: %v", payload.AssetID, err)
 	}
 
-	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
+	dataMap := map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID}
+	data, err := json.Marshal(dataMap)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo serializar data de la notificacion de venta nueva: %v", err)
 		return
@@ -557,6 +581,12 @@ func handleOrderCreated(pool *pgxpool.Pool, msg amqp.Delivery) {
 	const body = "Un comprador ya pagó tu producto. Márcalo como enviado cuando lo despaches."
 	if _, err := pool.Exec(context.Background(), query, payload.SellerID, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion de venta nueva para la orden %s: %v", payload.OrderID, err)
+		return
+	}
+
+	dataMap["type"] = "pedido_recibido"
+	if err := sender.Notify(context.Background(), payload.SellerID, title, body, dataMap); err != nil {
+		log.Printf("[eventbus] no se pudo enviar el push de venta nueva para la orden %s: %v", payload.OrderID, err)
 	}
 }
 
@@ -564,7 +594,7 @@ func handleOrderCreated(pool *pgxpool.Pool, msg amqp.Delivery) {
 // ShipOrderUseCase.go cuando el vendedor marca el pedido como enviado) y
 // avisa al comprador -- antes de esto no existía el paso "enviado" ni una
 // forma de que el comprador supiera que ya podía esperar su pedido.
-func StartOrderShippedConsumer(url string, pool *pgxpool.Pool) {
+func StartOrderShippedConsumer(url string, pool *pgxpool.Pool, sender push.Sender) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo conectar a RabbitMQ para consumir order.shipped: %v", err)
@@ -612,12 +642,12 @@ func StartOrderShippedConsumer(url string, pool *pgxpool.Pool) {
 
 	go func() {
 		for msg := range msgs {
-			handleOrderShipped(pool, msg)
+			handleOrderShipped(pool, sender, msg)
 		}
 	}()
 }
 
-func handleOrderShipped(pool *pgxpool.Pool, msg amqp.Delivery) {
+func handleOrderShipped(pool *pgxpool.Pool, sender push.Sender, msg amqp.Delivery) {
 	defer msg.Ack(false)
 
 	var payload orderConfirmedPayload
@@ -626,7 +656,8 @@ func handleOrderShipped(pool *pgxpool.Pool, msg amqp.Delivery) {
 		return
 	}
 
-	data, err := json.Marshal(map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID})
+	dataMap := map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID}
+	data, err := json.Marshal(dataMap)
 	if err != nil {
 		log.Printf("[eventbus] no se pudo serializar data de la notificacion de envío: %v", err)
 		return
@@ -640,5 +671,11 @@ func handleOrderShipped(pool *pgxpool.Pool, msg amqp.Delivery) {
 	const body = "El vendedor marcó tu pedido como enviado. Confírmalo cuando lo recibas."
 	if _, err := pool.Exec(context.Background(), query, payload.BuyerID, title, body, data); err != nil {
 		log.Printf("[eventbus] no se pudo crear la notificacion de envío para la orden %s: %v", payload.OrderID, err)
+		return
+	}
+
+	dataMap["type"] = "pedido_enviado"
+	if err := sender.Notify(context.Background(), payload.BuyerID, title, body, dataMap); err != nil {
+		log.Printf("[eventbus] no se pudo enviar el push de envío para la orden %s: %v", payload.OrderID, err)
 	}
 }

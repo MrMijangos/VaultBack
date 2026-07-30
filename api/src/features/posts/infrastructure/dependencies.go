@@ -5,7 +5,9 @@ import (
 
 	"vault/src/core/cloudinary"
 	"vault/src/core/moderation"
+	"vault/src/core/push"
 	assetAdapters "vault/src/features/assets/infrastructure/adapters"
+	notificationsInfra "vault/src/features/notifications/infrastructure"
 	"vault/src/features/posts/application"
 	"vault/src/features/posts/infrastructure/adapters"
 	"vault/src/features/posts/infrastructure/controllers"
@@ -48,9 +50,10 @@ func BuildUploadPostPhotoController(pool *pgxpool.Pool, uploader *cloudinary.Ima
 	return controllers.NewUploadPostPhotoController(useCase)
 }
 
-func BuildLikePostController(pool *pgxpool.Pool) *controllers.LikePostController {
+func BuildLikePostController(pool *pgxpool.Pool, sender push.Sender) *controllers.LikePostController {
 	repo := adapters.NewPostgreSQLPostRepository(pool)
-	useCase := application.NewLikePostUseCase(repo)
+	notifier := notificationsInfra.BuildNotificationPublisher(pool, sender)
+	useCase := application.NewLikePostUseCase(repo, notifier)
 	return controllers.NewLikePostController(useCase)
 }
 

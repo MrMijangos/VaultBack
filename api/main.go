@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"vault/src/core/eventbus"
 	"vault/src/core/middleware"
 	"vault/src/core/moderation"
+	"vault/src/core/push"
 	addressesInfra "vault/src/features/addresses/infrastructure"
 	addressesRouter "vault/src/features/addresses/infrastructure/router"
 	assetcommentsInfra "vault/src/features/assetcomments/infrastructure"
@@ -28,6 +30,8 @@ import (
 	chatRouter "vault/src/features/chat/infrastructure/router"
 	commentsInfra "vault/src/features/comments/infrastructure"
 	commentsRouter "vault/src/features/comments/infrastructure/router"
+	fcmtokensInfra "vault/src/features/fcmtokens/infrastructure"
+	fcmtokensRouter "vault/src/features/fcmtokens/infrastructure/router"
 	maintenancelogsInfra "vault/src/features/maintenancelogs/infrastructure"
 	maintenancelogsRouter "vault/src/features/maintenancelogs/infrastructure/router"
 	notificationsInfra "vault/src/features/notifications/infrastructure"
@@ -67,6 +71,25 @@ func main() {
 		log.Fatalf("error al migrar el esquema: %v", err)
 	}
 
+	// Sender de notificaciones push (FCM). Si falta la cuenta de servicio, o
+	// si Firebase no pudo inicializarse, se usa un sender "noop" y la API
+	// sigue funcionando con normalidad -- las notificaciones dentro de la
+	// app se siguen creando, solo no se manda el push.
+	fcmTokenProvider := fcmtokensInfra.BuildFCMTokenProvider(pool)
+	var pushSender push.Sender
+	if cfg.FirebaseServiceAccountKey == "" {
+		log.Println("advertencia: FIREBASE_SERVICE_ACCOUNT_KEY no configurado, las notificaciones push no se enviarán")
+		pushSender = push.NoopSender{}
+	} else {
+		fcmSender, err := push.NewFCMSender(context.Background(), cfg.FirebaseServiceAccountKey, fcmTokenProvider)
+		if err != nil {
+			log.Printf("advertencia: no se pudo inicializar Firebase (%v), las notificaciones push no se enviarán", err)
+			pushSender = push.NoopSender{}
+		} else {
+			pushSender = fcmSender
+		}
+	}
+
 	// Publisher de eventos hacia vault-ai-service (NLP/ML). Si RabbitMQ no
 	// está disponible, se usa un publisher "noop" y la API sigue funcionando
 	// con normalidad (solo no se dispara NLP/ML para contenido nuevo).
@@ -79,11 +102,11 @@ func main() {
 		defer rabbitPublisher.Close()
 		publisher = rabbitPublisher
 		eventbus.StartNLPAnalyzedConsumer(cfg.RabbitMQURL, pool)
-		eventbus.StartBlockchainConfirmedConsumer(cfg.RabbitMQURL, pool)
-		eventbus.StartSubscriptionEventsConsumer(cfg.RabbitMQURL, pool)
-		eventbus.StartOrderConfirmedConsumer(cfg.RabbitMQURL, pool)
-		eventbus.StartOrderCreatedConsumer(cfg.RabbitMQURL, pool)
-		eventbus.StartOrderShippedConsumer(cfg.RabbitMQURL, pool)
+		eventbus.StartBlockchainConfirmedConsumer(cfg.RabbitMQURL, pool, pushSender)
+		eventbus.StartSubscriptionEventsConsumer(cfg.RabbitMQURL, pool, pushSender)
+		eventbus.StartOrderConfirmedConsumer(cfg.RabbitMQURL, pool, pushSender)
+		eventbus.StartOrderCreatedConsumer(cfg.RabbitMQURL, pool, pushSender)
+		eventbus.StartOrderShippedConsumer(cfg.RabbitMQURL, pool, pushSender)
 	}
 
 	// Cliente síncrono de moderación: se llama antes de guardar un post,
@@ -190,7 +213,7 @@ func main() {
 		postsInfra.BuildUpdatePostController(pool),
 		postsInfra.BuildDeletePostController(pool),
 		postsInfra.BuildUploadPostPhotoController(pool, imageUploader),
-		postsInfra.BuildLikePostController(pool),
+		postsInfra.BuildLikePostController(pool, pushSender),
 		postsInfra.BuildUnlikePostController(pool),
 		postsInfra.BuildSavePostController(pool),
 		postsInfra.BuildUnsavePostController(pool),
@@ -200,7 +223,7 @@ func main() {
 
 	commentsRouter.RegisterRoutes(
 		mux,
-		commentsInfra.BuildCreateCommentController(pool, moderationClient),
+		commentsInfra.BuildCreateCommentController(pool, moderationClient, pushSender),
 		commentsInfra.BuildGetCommentsByPostController(pool),
 		commentsInfra.BuildDeleteCommentController(pool),
 		cfg.JWTSecret,
@@ -228,7 +251,7 @@ func main() {
 
 	chatRouter.RegisterRoutes(
 		mux,
-		chatInfra.BuildSendChatMessageController(pool),
+		chatInfra.BuildSendChatMessageController(pool, pushSender),
 		chatInfra.BuildGetConversationMessagesController(pool),
 		chatInfra.BuildUpdateChatMessageStatusController(pool),
 		chatInfra.BuildGetConversationsController(pool),
@@ -248,11 +271,18 @@ func main() {
 
 	notificationsRouter.RegisterRoutes(
 		mux,
-		notificationsInfra.BuildCreateNotificationController(pool),
-		notificationsInfra.BuildGetMyNotificationsController(pool),
-		notificationsInfra.BuildMarkNotificationAsReadController(pool),
-		notificationsInfra.BuildMarkAllNotificationsAsReadController(pool),
-		notificationsInfra.BuildDeleteNotificationController(pool),
+		notificationsInfra.BuildCreateNotificationController(pool, pushSender),
+		notificationsInfra.BuildGetMyNotificationsController(pool, pushSender),
+		notificationsInfra.BuildMarkNotificationAsReadController(pool, pushSender),
+		notificationsInfra.BuildMarkAllNotificationsAsReadController(pool, pushSender),
+		notificationsInfra.BuildDeleteNotificationController(pool, pushSender),
+		cfg.JWTSecret,
+	)
+
+	fcmtokensRouter.RegisterRoutes(
+		mux,
+		fcmtokensInfra.BuildRegisterFCMTokenController(pool),
+		fcmtokensInfra.BuildDeleteFCMTokenController(pool),
 		cfg.JWTSecret,
 	)
 

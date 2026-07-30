@@ -88,6 +88,22 @@ func (r *PostgreSQLPostRepository) FindByID(ctx context.Context, id string) (ent
 	return p, nil
 }
 
+// FindAuthorID satisface comments.domain.repositories.PostAuthorProvider por
+// estructura (mismo patrón que AssetPhotoProvider) -- comments necesita
+// saber a quién notificar cuando llega un comentario nuevo, sin depender de
+// application/infraestructura de posts.
+func (r *PostgreSQLPostRepository) FindAuthorID(ctx context.Context, postID string) (string, error) {
+	var authorID string
+	err := r.pool.QueryRow(ctx, `SELECT user_id FROM posts WHERE id = $1`, postID).Scan(&authorID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", repositories.ErrPostNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("no se pudo obtener el autor de la publicacion: %w", err)
+	}
+	return authorID, nil
+}
+
 func (r *PostgreSQLPostRepository) Update(ctx context.Context, id string, userID string, content string) (entities.Post, error) {
 	tag, err := r.pool.Exec(ctx, `UPDATE posts SET content = $1 WHERE id = $2 AND user_id = $3`, content, id, userID)
 	if err != nil {

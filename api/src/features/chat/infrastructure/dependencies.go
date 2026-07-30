@@ -3,18 +3,19 @@ package infrastructure
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vault/src/core/push"
 	"vault/src/features/chat/application"
 	"vault/src/features/chat/infrastructure/adapters"
 	"vault/src/features/chat/infrastructure/controllers"
-	notificationsAdapters "vault/src/features/notifications/infrastructure/adapters"
+	notificationsInfra "vault/src/features/notifications/infrastructure"
 )
 
 // BuildSendChatMessageController no recibe un moderationClient -- a
 // diferencia de comments/reviews/posts, el chat es E2EE y el servidor nunca
 // ve el contenido en texto plano, por lo que no hay nada que moderar.
-func BuildSendChatMessageController(pool *pgxpool.Pool) *controllers.SendChatMessageController {
+func BuildSendChatMessageController(pool *pgxpool.Pool, sender push.Sender) *controllers.SendChatMessageController {
 	repo := adapters.NewPostgreSQLChatMessageRepository(pool)
-	notifier := notificationsAdapters.NewPostgreSQLNotificationRepository(pool)
+	notifier := notificationsInfra.BuildNotificationPublisher(pool, sender)
 	useCase := application.NewSendChatMessageUseCase(repo, notifier)
 	return controllers.NewSendChatMessageController(useCase)
 }

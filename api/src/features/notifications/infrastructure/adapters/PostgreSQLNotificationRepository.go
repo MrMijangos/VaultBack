@@ -2,12 +2,15 @@ package adapters
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vault/src/core/push"
 	"vault/src/features/notifications/domain/entities"
 	"vault/src/features/notifications/domain/repositories"
 )
@@ -18,11 +21,20 @@ const selectNotificationsQuery = `
 `
 
 type PostgreSQLNotificationRepository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	sender push.Sender
 }
 
-func NewPostgreSQLNotificationRepository(pool *pgxpool.Pool) *PostgreSQLNotificationRepository {
-	return &PostgreSQLNotificationRepository{pool: pool}
+// NewPostgreSQLNotificationRepository recibe un push.Sender para mandar la
+// notificación push justo después de insertarla -- este es el único punto
+// por el que pasan TODAS las notificaciones creadas en el mismo proceso
+// (chat, comentarios, likes, y el endpoint manual POST /notifications), así
+// que agregar el push acá evita repetirlo en cada caso de uso. Los eventos
+// que llegan por RabbitMQ (blockchain, suscripciones, pedidos) insertan con
+// SQL crudo en src/core/eventbus/Consumer.go y no pasan por este repositorio
+// -- ahí el push se manda aparte, junto a cada INSERT.
+func NewPostgreSQLNotificationRepository(pool *pgxpool.Pool, sender push.Sender) *PostgreSQLNotificationRepository {
+	return &PostgreSQLNotificationRepository{pool: pool, sender: sender}
 }
 
 func scanNotification(row pgx.Row) (entities.Notification, error) {
@@ -43,6 +55,18 @@ func (r *PostgreSQLNotificationRepository) Create(ctx context.Context, notificat
 	if err != nil {
 		return entities.Notification{}, fmt.Errorf("no se pudo crear la notificacion: %w", err)
 	}
+
+	// Si el push falla, la notificación ya quedó guardada igual (el usuario
+	// la ve al abrir la app) -- no vale la pena devolver error por esto.
+	pushData := map[string]string{"type": notification.Subtype}
+	if len(notification.Data) > 0 {
+		_ = json.Unmarshal(notification.Data, &pushData)
+		pushData["type"] = notification.Subtype
+	}
+	if err := r.sender.Notify(ctx, notification.UserID, notification.Title, notification.Body, pushData); err != nil {
+		log.Printf("no se pudo enviar el push de la notificacion %s: %v", notification.ID, err)
+	}
+
 	return notification, nil
 }
 

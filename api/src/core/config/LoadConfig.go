@@ -29,6 +29,12 @@ func LoadConfig() (*Config, error) {
 		CloudinaryAPISecret:  os.Getenv("CLOUDINARY_API_SECRET"),
 		RabbitMQURL:          os.Getenv("RABBITMQ_URL"),
 		NLPServiceURL:        os.Getenv("NLP_SERVICE_URL"),
+		// Contenido JSON completo de la cuenta de servicio (Firebase Console
+		// -> Configuración -> Cuentas de servicio -> Generar nueva clave
+		// privada), no una ruta de archivo -- más simple de configurar en
+		// Railway/Heroku que subir un archivo al contenedor. Opcional: si
+		// falta, el envío de push queda en no-op (ver src/core/push).
+		FirebaseServiceAccountKey: os.Getenv("FIREBASE_SERVICE_ACCOUNT_KEY"),
 	}
 
 	if cfg.AppPort == "" {
