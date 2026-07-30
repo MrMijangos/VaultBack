@@ -1,4 +1,5 @@
 package application
+import "log"
 
 import (
 	"context"
@@ -32,6 +33,9 @@ func (uc *CreateCommentUseCase) Execute(ctx context.Context, postID string, user
 	if err != nil {
 		return response.CommentResponse{}, err
 	}
+
+	log.Printf("Moderation result: %+v\n", result)
+
 	if result.IsToxic {
 		return response.CommentResponse{}, moderation.ErrToxicContent
 	}
