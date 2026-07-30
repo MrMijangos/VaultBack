@@ -5,13 +5,16 @@ import (
 
 	"vault/src/core/moderation"
 	"vault/src/features/assetcomments/application"
+	"vault/src/features/assetcomments/domain/repositories"
 	"vault/src/features/assetcomments/infrastructure/adapters"
 	"vault/src/features/assetcomments/infrastructure/controllers"
+	assetsadapters "vault/src/features/assets/infrastructure/adapters"
 )
 
-func BuildCreateAssetCommentController(pool *pgxpool.Pool, moderationClient *moderation.Client) *controllers.CreateAssetCommentController {
+func BuildCreateAssetCommentController(pool *pgxpool.Pool, moderationClient *moderation.Client, purchases repositories.PurchaseVerifier) *controllers.CreateAssetCommentController {
 	repo := adapters.NewPostgreSQLAssetCommentRepository(pool)
-	useCase := application.NewCreateAssetCommentUseCase(repo, moderationClient)
+	assetRepo := assetsadapters.NewPostgreSQLAssetRepository(pool)
+	useCase := application.NewCreateAssetCommentUseCase(repo, assetRepo, purchases, moderationClient)
 	return controllers.NewCreateAssetCommentController(useCase)
 }
 

@@ -163,7 +163,7 @@ func main() {
 
 	assetcommentsRouter.RegisterRoutes(
 		mux,
-		assetcommentsInfra.BuildCreateAssetCommentController(pool, moderationClient),
+		assetcommentsInfra.BuildCreateAssetCommentController(pool, moderationClient, reviewsAdapters.NewHTTPPurchaseVerifier(cfg.PaymentServiceURL)),
 		assetcommentsInfra.BuildGetAssetCommentsController(pool),
 		assetcommentsInfra.BuildDeleteAssetCommentController(pool),
 		cfg.JWTSecret,

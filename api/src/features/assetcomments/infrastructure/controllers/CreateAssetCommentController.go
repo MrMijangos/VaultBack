@@ -48,6 +48,8 @@ func (c *CreateAssetCommentController) Handle(w http.ResponseWriter, r *http.Req
 			httpresponse.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		case errors.Is(err, moderation.ErrUnavailable):
 			httpresponse.WriteError(w, http.StatusServiceUnavailable, err.Error())
+		case errors.Is(err, application.ErrNotPurchased):
+			httpresponse.WriteError(w, http.StatusForbidden, err.Error())
 		default:
 			httpresponse.WriteError(w, http.StatusBadRequest, err.Error())
 		}
