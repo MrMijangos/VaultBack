@@ -487,6 +487,32 @@ func handleOrderConfirmed(pool *pgxpool.Pool, sender push.Sender, msg amqp.Deliv
 	if err := sender.Notify(context.Background(), payload.BuyerID, title, body, dataMap); err != nil {
 		log.Printf("[eventbus] no se pudo enviar el push de compra para el activo %s: %v", payload.AssetID, err)
 	}
+
+	// El vendedor también necesita enterarse -- antes de esto la venta se
+	// liberaba (Stripe transfería el dinero) sin ningún aviso de su lado, y
+	// "Mis ventas" se quedaba mostrando "enviado" hasta que entrara a mano.
+	sellerDataMap := map[string]string{"asset_id": payload.AssetID, "order_id": payload.OrderID}
+	sellerData, err := json.Marshal(sellerDataMap)
+	if err != nil {
+		log.Printf("[eventbus] no se pudo serializar data de la notificacion de venta liberada: %v", err)
+		return
+	}
+
+	const sellerNotifyQuery = `
+		INSERT INTO notifications (user_id, type, subtype, title, body, data)
+		VALUES ($1, 'venta', 'pedido_liberado', $2, $3, $4)
+	`
+	sellerTitle := "Venta confirmada"
+	sellerBody := fmt.Sprintf("El comprador confirmó que recibió %s. Ya se liberó tu pago.", assetName)
+	if _, err := pool.Exec(context.Background(), sellerNotifyQuery, payload.SellerID, sellerTitle, sellerBody, sellerData); err != nil {
+		log.Printf("[eventbus] no se pudo crear la notificacion de venta liberada para la orden %s: %v", payload.OrderID, err)
+		return
+	}
+
+	sellerDataMap["type"] = "pedido_liberado"
+	if err := sender.Notify(context.Background(), payload.SellerID, sellerTitle, sellerBody, sellerDataMap); err != nil {
+		log.Printf("[eventbus] no se pudo enviar el push de venta liberada para la orden %s: %v", payload.OrderID, err)
+	}
 }
 
 // StartOrderCreatedConsumer escucha order.created (payment/ lo publica en

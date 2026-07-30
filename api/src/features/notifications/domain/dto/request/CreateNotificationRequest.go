@@ -25,6 +25,7 @@ var allowedNotificationSubtypes = map[string]bool{
 	"articulo_confirmado":   true,
 	"pedido_recibido":       true,
 	"pedido_enviado":        true,
+	"pedido_liberado":       true,
 	"nueva_compra":          true,
 	"asset_verificado":      true,
 	"likes_post":            true,

@@ -306,7 +306,7 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
 
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_subtype_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_subtype_check
-	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'en_proceso_servicio', 'en_proceso_reparacion', 'solicitud_recibida', 'articulo_confirmado', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer', 'comentario_nuevo']::text[]));
+	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'en_proceso_servicio', 'en_proceso_reparacion', 'solicitud_recibida', 'articulo_confirmado', 'pedido_recibido', 'pedido_enviado', 'pedido_liberado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer', 'comentario_nuevo']::text[]));
 
 -- Un usuario puede tener varios dispositivos (o reinstalar la app), así que
 -- token es único globalmente en vez de único por (user_id, token): si el
