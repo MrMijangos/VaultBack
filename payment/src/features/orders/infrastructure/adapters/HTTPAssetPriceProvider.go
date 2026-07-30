@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -31,8 +32,11 @@ type assetResponse struct {
 // GetSalePriceCents llama a GET /api/v1/assets/{id} en api/ (ruta pública,
 // no requiere token) y convierte sale_price (pesos, ej. 199.99) a centavos.
 func (p *HTTPAssetPriceProvider) GetSalePriceCents(ctx context.Context, assetID string) (int64, bool, error) {
-	url := fmt.Sprintf("%s/api/v1/assets/%s", p.baseURL, assetID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	// assetID ya se valida como UUID en CreateOrderUseCase, pero se escapa
+	// igual acá -- este adapter es el único lugar donde se arma la URL, así
+	// que es donde debe defenderse aunque cambien las validaciones de arriba.
+	endpoint := fmt.Sprintf("%s/api/v1/assets/%s", p.baseURL, url.PathEscape(assetID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return 0, false, fmt.Errorf("no se pudo armar la consulta del activo: %w", err)
 	}

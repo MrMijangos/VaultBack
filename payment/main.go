@@ -72,6 +72,13 @@ func main() {
 	}
 
 	engine := gin.Default()
+	// Sin este límite, un JSON gigante se lee entero en memoria antes de
+	// fallar la validación -- suficiente para tirar el servicio por RAM con
+	// pocas peticiones concurrentes.
+	engine.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 10<<20)
+		c.Next()
+	})
 	engine.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", cfg.CORSOrigin)
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")

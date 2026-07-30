@@ -51,6 +51,13 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, buyerID string, req r
 	if req.SellerID == "" || req.AssetID == "" || req.BuyerEmail == "" || req.PaymentMethodID == "" {
 		return nil, ErrInvalidRequest
 	}
+	// AssetID viaja sin validar hasta HTTPAssetPriceProvider, que lo mete
+	// directo en la URL de la consulta a api/ -- se exige formato UUID acá
+	// para que nadie pueda mandar algo como "../otra-ruta" y desviar esa
+	// petición interna a un endpoint distinto.
+	if _, err := uuid.Parse(req.AssetID); err != nil {
+		return nil, ErrInvalidRequest
+	}
 	if buyerID == req.SellerID {
 		return nil, ErrSelfPurchase
 	}

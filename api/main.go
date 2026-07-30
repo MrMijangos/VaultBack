@@ -286,7 +286,7 @@ func main() {
 		cfg.JWTSecret,
 	)
 
-	handler := middleware.CORS(cfg.CORSOrigin)(mux)
+	handler := middleware.CORS(cfg.CORSOrigin)(middleware.LimitBodySize(mux))
 
 	fmt.Println("API Vault iniciada correctamente.")
 	log.Fatal(http.ListenAndServe(":"+cfg.AppPort, handler))

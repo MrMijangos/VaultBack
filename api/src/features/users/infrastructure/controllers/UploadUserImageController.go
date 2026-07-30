@@ -39,6 +39,7 @@ func (c *UploadUserImageController) Handle(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		httpresponse.WriteError(w, http.StatusBadRequest, "la imagen supera el tamaño maximo permitido (5MB)")
 		return
