@@ -18,5 +18,6 @@ type Config struct {
 	CloudinaryAPISecret       string
 	RabbitMQURL               string
 	NLPServiceURL             string
+	PaymentServiceURL         string
 	FirebaseServiceAccountKey string
 }

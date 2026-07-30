@@ -14,16 +14,28 @@ import (
 
 type CreateReviewUseCase struct {
 	repo       repositories.ReviewRepository
+	purchases  repositories.PurchaseVerifier
 	moderation *moderation.Client
 }
 
-func NewCreateReviewUseCase(repo repositories.ReviewRepository, moderationClient *moderation.Client) *CreateReviewUseCase {
-	return &CreateReviewUseCase{repo: repo, moderation: moderationClient}
+func NewCreateReviewUseCase(repo repositories.ReviewRepository, purchases repositories.PurchaseVerifier, moderationClient *moderation.Client) *CreateReviewUseCase {
+	return &CreateReviewUseCase{repo: repo, purchases: purchases, moderation: moderationClient}
 }
 
 func (uc *CreateReviewUseCase) Execute(ctx context.Context, userID string, req request.CreateReviewRequest) (response.ReviewResponse, error) {
 	if err := req.Validate(); err != nil {
 		return response.ReviewResponse{}, err
+	}
+
+	// Exigir una compra completada antes de gastar la llamada al servicio de
+	// moderación (más barato fallar rápido acá que analizar contenido que
+	// de todos modos se va a rechazar).
+	purchased, err := uc.purchases.HasPurchased(ctx, userID, req.ProviderID)
+	if err != nil {
+		return response.ReviewResponse{}, err
+	}
+	if !purchased {
+		return response.ReviewResponse{}, ErrNotPurchased
 	}
 
 	reviewID := uuid.NewString()

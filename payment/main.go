@@ -137,6 +137,7 @@ func main() {
 		ordersInfra.BuildShipOrderController(orderRepo, publisher),
 		ordersInfra.BuildListMyOrdersController(orderRepo),
 		ordersInfra.BuildListMySalesController(orderRepo),
+		ordersInfra.BuildHasPurchasedController(orderRepo),
 	)
 
 	fmt.Println("Servicio de pagos Vault iniciado correctamente.")

@@ -12,12 +12,32 @@ import (
 	"vault/src/features/assets/domain/repositories"
 )
 
+// selectAssetsQuery trae, junto con cada activo, la calificación del
+// vendedor y cuántas veces se le dio mantenimiento/restauración -- calculado
+// acá (subqueries contra reviews/maintenance_logs, misma base de datos) en
+// vez de con una llamada aparte por activo, para que el listado del
+// marketplace no dispare N consultas extra por cada card. La fórmula de
+// rating es la misma que providerRatingQuery en reviews/ (ver ese archivo
+// para la explicación de por qué no se promedia sentiment_score crudo).
 const selectAssetsQuery = `
 	SELECT a.id, a.user_id, a.name, a.category, COALESCE(a.brand, ''), a.purchase_value::float8, a.condition,
 	       a.purchase_date, COALESCE(a.store_origin, ''), COALESCE(a.notes, ''),
 	       COALESCE(a.blockchain_tx_id, ''), COALESCE(a.blockchain_hash, ''), a.created_at,
 	       COALESCE(a.is_for_sale, false), a.sale_price::float8, COALESCE(a.sale_description, ''), COALESCE(a.size, ''),
-	       u.name, COALESCE(u.avatar_url, '')
+	       u.name, COALESCE(u.avatar_url, ''),
+	       COALESCE((
+	           SELECT AVG(
+	               CASE r.sentiment_label
+	                   WHEN 'positivo' THEN 5.5 + r.sentiment_score * 4.5
+	                   WHEN 'negativo' THEN 5.5 - r.sentiment_score * 4.5
+	                   ELSE 5.5
+	               END
+	           )
+	           FROM reviews r WHERE r.provider_id = a.user_id
+	       ), 0.0),
+	       (SELECT COUNT(*) FROM reviews r WHERE r.provider_id = a.user_id),
+	       (SELECT COUNT(*) FROM maintenance_logs m WHERE m.asset_id = a.id AND m.type = 'mantenimiento'),
+	       (SELECT COUNT(*) FROM maintenance_logs m WHERE m.asset_id = a.id AND m.type = 'restauracion')
 	FROM assets a
 	JOIN users u ON u.id = a.user_id
 `
@@ -37,6 +57,7 @@ func scanAsset(row pgx.Row) (entities.Asset, error) {
 		&a.PurchaseDate, &a.StoreOrigin, &a.Notes, &a.BlockchainTxID, &a.BlockchainHash, &a.CreatedAt,
 		&a.IsForSale, &a.SalePrice, &a.SaleDescription, &a.Size,
 		&a.SellerName, &a.SellerAvatarURL,
+		&a.Rating, &a.TotalReviews, &a.ServicesCount, &a.RestorationsCount,
 	)
 	return a, err
 }

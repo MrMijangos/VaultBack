@@ -29,6 +29,7 @@ func LoadConfig() (*Config, error) {
 		CloudinaryAPISecret:  os.Getenv("CLOUDINARY_API_SECRET"),
 		RabbitMQURL:          os.Getenv("RABBITMQ_URL"),
 		NLPServiceURL:        os.Getenv("NLP_SERVICE_URL"),
+		PaymentServiceURL:    os.Getenv("PAYMENT_SERVICE_URL"),
 		// Contenido JSON completo de la cuenta de servicio (Firebase Console
 		// -> Configuración -> Cuentas de servicio -> Generar nueva clave
 		// privada), no una ruta de archivo -- más simple de configurar en
@@ -56,6 +57,9 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.NLPServiceURL == "" {
 		cfg.NLPServiceURL = "http://localhost:8006"
+	}
+	if cfg.PaymentServiceURL == "" {
+		cfg.PaymentServiceURL = "http://localhost:8005"
 	}
 	if cfg.GoogleOAuthClientIDs == "" {
 		// Client ID "web" (client_type 3) del proyecto de Firebase en

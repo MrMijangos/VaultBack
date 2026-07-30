@@ -83,6 +83,18 @@ func (r *PostgreSQLBusinessRepository) FindByID(ctx context.Context, id string) 
 	return b, nil
 }
 
+func (r *PostgreSQLBusinessRepository) FindByUserID(ctx context.Context, userID string) (entities.Business, error) {
+	row := r.pool.QueryRow(ctx, selectBusinessesQuery+" WHERE user_id = $1", userID)
+	b, err := scanBusiness(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return entities.Business{}, repositories.ErrBusinessNotFound
+	}
+	if err != nil {
+		return entities.Business{}, fmt.Errorf("no se pudo obtener el negocio: %w", err)
+	}
+	return b, nil
+}
+
 func (r *PostgreSQLBusinessRepository) Update(ctx context.Context, id string, userID string, business entities.Business) (entities.Business, error) {
 	const query = `
 		UPDATE businesses

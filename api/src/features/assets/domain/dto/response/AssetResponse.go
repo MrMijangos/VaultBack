@@ -14,26 +14,30 @@ type AssetPhotoResponse struct {
 }
 
 type AssetResponse struct {
-	ID              string               `json:"id"`
-	UserID          string               `json:"user_id"`
-	Name            string               `json:"name"`
-	Category        string               `json:"category"`
-	Brand           string               `json:"brand"`
-	PurchaseValue   *float64             `json:"purchase_value"`
-	Condition       string               `json:"condition"`
-	PurchaseDate    *string              `json:"purchase_date"`
-	StoreOrigin     string               `json:"store_origin"`
-	Notes           string               `json:"notes"`
-	BlockchainTxID  string               `json:"blockchain_tx_id"`
-	BlockchainHash  string               `json:"blockchain_hash"`
-	CreatedAt       time.Time            `json:"created_at"`
-	Photos          []AssetPhotoResponse `json:"photos"`
-	IsForSale       bool                 `json:"is_for_sale"`
-	SalePrice       *float64             `json:"sale_price"`
-	SaleDescription string               `json:"sale_description"`
-	Size            string               `json:"size"`
-	SellerName      string               `json:"seller_name"`
-	SellerAvatarURL string               `json:"seller_avatar_url"`
+	ID                string               `json:"id"`
+	UserID            string               `json:"user_id"`
+	Name              string               `json:"name"`
+	Category          string               `json:"category"`
+	Brand             string               `json:"brand"`
+	PurchaseValue     *float64             `json:"purchase_value"`
+	Condition         string               `json:"condition"`
+	PurchaseDate      *string              `json:"purchase_date"`
+	StoreOrigin       string               `json:"store_origin"`
+	Notes             string               `json:"notes"`
+	BlockchainTxID    string               `json:"blockchain_tx_id"`
+	BlockchainHash    string               `json:"blockchain_hash"`
+	CreatedAt         time.Time            `json:"created_at"`
+	Photos            []AssetPhotoResponse `json:"photos"`
+	IsForSale         bool                 `json:"is_for_sale"`
+	SalePrice         *float64             `json:"sale_price"`
+	SaleDescription   string               `json:"sale_description"`
+	Size              string               `json:"size"`
+	SellerName        string               `json:"seller_name"`
+	SellerAvatarURL   string               `json:"seller_avatar_url"`
+	Rating            float64              `json:"rating"`
+	TotalReviews      int                  `json:"total_reviews"`
+	ServicesCount     int                  `json:"services_count"`
+	RestorationsCount int                  `json:"restorations_count"`
 }
 
 func FromEntity(asset entities.Asset, photos []entities.AssetPhoto) AssetResponse {
@@ -54,26 +58,29 @@ func FromEntity(asset entities.Asset, photos []entities.AssetPhoto) AssetRespons
 	}
 
 	return AssetResponse{
-		ID:              asset.ID,
-		UserID:          asset.UserID,
-		Name:            asset.Name,
-		Category:        asset.Category,
-		Brand:           asset.Brand,
-		PurchaseValue:   asset.PurchaseValue,
-		Condition:       asset.Condition,
-		PurchaseDate:    purchaseDate,
-		StoreOrigin:     asset.StoreOrigin,
-		Notes:           asset.Notes,
-		BlockchainTxID:  asset.BlockchainTxID,
-		BlockchainHash:  asset.BlockchainHash,
-		CreatedAt:       asset.CreatedAt,
-		Photos:          photoResponses,
-		IsForSale:       asset.IsForSale,
-		SalePrice:       asset.SalePrice,
-		SaleDescription: asset.SaleDescription,
-		Size:            asset.Size,
-		SellerName:      asset.SellerName,
-		SellerAvatarURL: asset.SellerAvatarURL,
+		ID:                asset.ID,
+		UserID:            asset.UserID,
+		Name:              asset.Name,
+		Category:          asset.Category,
+		Brand:             asset.Brand,
+		PurchaseValue:     asset.PurchaseValue,
+		Condition:         asset.Condition,
+		PurchaseDate:      purchaseDate,
+		StoreOrigin:       asset.StoreOrigin,
+		Notes:             asset.Notes,
+		BlockchainTxID:    asset.BlockchainTxID,
+		BlockchainHash:    asset.BlockchainHash,
+		CreatedAt:         asset.CreatedAt,
+		Photos:            photoResponses,
+		IsForSale:         asset.IsForSale,
+		SalePrice:         asset.SalePrice,
+		SaleDescription:   asset.SaleDescription,
+		Size:              asset.Size,
+		SellerName:        asset.SellerName,
+		SellerAvatarURL:   asset.SellerAvatarURL,
+		Rating:            asset.Rating,
+		TotalReviews:      asset.TotalReviews,
+		ServicesCount:     asset.ServicesCount,
+		RestorationsCount: asset.RestorationsCount,
 	}
 }
-

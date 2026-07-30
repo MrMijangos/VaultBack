@@ -5,13 +5,14 @@ import (
 
 	"vault/src/core/moderation"
 	"vault/src/features/reviews/application"
+	"vault/src/features/reviews/domain/repositories"
 	"vault/src/features/reviews/infrastructure/adapters"
 	"vault/src/features/reviews/infrastructure/controllers"
 )
 
-func BuildCreateReviewController(pool *pgxpool.Pool, moderationClient *moderation.Client) *controllers.CreateReviewController {
+func BuildCreateReviewController(pool *pgxpool.Pool, moderationClient *moderation.Client, purchases repositories.PurchaseVerifier) *controllers.CreateReviewController {
 	repo := adapters.NewPostgreSQLReviewRepository(pool)
-	useCase := application.NewCreateReviewUseCase(repo, moderationClient)
+	useCase := application.NewCreateReviewUseCase(repo, purchases, moderationClient)
 	return controllers.NewCreateReviewController(useCase)
 }
 

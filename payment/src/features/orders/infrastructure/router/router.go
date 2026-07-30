@@ -16,8 +16,15 @@ func RegisterRoutes(
 	ship *controllers.ShipOrderController,
 	listMine *controllers.ListMyOrdersController,
 	listSelling *controllers.ListMySalesController,
+	hasPurchased *controllers.HasPurchasedController,
 ) {
 	orders := rg.Group("/orders")
+
+	// Pública (sin RequireAuth): la consulta reviews/ en api/ servidor a
+	// servidor para exigir una compra completada antes de dejar reseñar a
+	// un vendedor -- no lleva el JWT del comprador, solo los IDs.
+	orders.GET("/has-purchased", hasPurchased.Handle)
+
 	orders.Use(security.RequireAuth(jwtSecret))
 
 	orders.POST("", create.Handle)

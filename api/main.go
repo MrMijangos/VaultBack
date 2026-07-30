@@ -43,7 +43,10 @@ import (
 	restorerprofilesInfra "vault/src/features/restorerprofiles/infrastructure"
 	restorerprofilesRouter "vault/src/features/restorerprofiles/infrastructure/router"
 	reviewsInfra "vault/src/features/reviews/infrastructure"
+	reviewsAdapters "vault/src/features/reviews/infrastructure/adapters"
 	reviewsRouter "vault/src/features/reviews/infrastructure/router"
+	servicerequestsInfra "vault/src/features/servicerequests/infrastructure"
+	servicerequestsRouter "vault/src/features/servicerequests/infrastructure/router"
 	usersInfra "vault/src/features/users/infrastructure"
 	usersRouter "vault/src/features/users/infrastructure/router"
 )
@@ -231,7 +234,7 @@ func main() {
 
 	reviewsRouter.RegisterRoutes(
 		mux,
-		reviewsInfra.BuildCreateReviewController(pool, moderationClient),
+		reviewsInfra.BuildCreateReviewController(pool, moderationClient, reviewsAdapters.NewHTTPPurchaseVerifier(cfg.PaymentServiceURL)),
 		reviewsInfra.BuildGetReviewsByProviderController(pool),
 		reviewsInfra.BuildGetProviderRatingController(pool),
 		reviewsInfra.BuildGetReviewByIdController(pool),
@@ -283,6 +286,18 @@ func main() {
 		mux,
 		fcmtokensInfra.BuildRegisterFCMTokenController(pool),
 		fcmtokensInfra.BuildDeleteFCMTokenController(pool),
+		cfg.JWTSecret,
+	)
+
+	servicerequestsRouter.RegisterRoutes(
+		mux,
+		servicerequestsInfra.BuildCreateServiceRequestController(pool, pushSender),
+		servicerequestsInfra.BuildAcceptServiceRequestController(pool, pushSender),
+		servicerequestsInfra.BuildStartServiceRequestController(pool, pushSender),
+		servicerequestsInfra.BuildFinishServiceRequestController(pool, pushSender),
+		servicerequestsInfra.BuildConfirmServiceRequestController(pool, pushSender),
+		servicerequestsInfra.BuildListMyServiceRequestsController(pool),
+		servicerequestsInfra.BuildListIncomingServiceRequestsController(pool),
 		cfg.JWTSecret,
 	)
 

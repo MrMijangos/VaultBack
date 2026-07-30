@@ -52,3 +52,8 @@ func BuildListMySalesController(orderRepo repositories.OrderRepository) *control
 	useCase := application.NewListMySalesUseCase(orderRepo)
 	return controllers.NewListMySalesController(useCase)
 }
+
+func BuildHasPurchasedController(orderRepo repositories.OrderRepository) *controllers.HasPurchasedController {
+	useCase := application.NewHasPurchasedUseCase(orderRepo)
+	return controllers.NewHasPurchasedController(useCase)
+}

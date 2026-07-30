@@ -102,6 +102,19 @@ func (r *PostgreSQLOrderRepository) ListByBuyerID(ctx context.Context, buyerID s
 	return out, rows.Err()
 }
 
+func (r *PostgreSQLOrderRepository) ExistsCompletedOrder(ctx context.Context, buyerID string, sellerID string) (bool, error) {
+	const query = `
+		SELECT EXISTS(
+			SELECT 1 FROM orders WHERE buyer_id = $1 AND seller_id = $2 AND status = $3
+		)
+	`
+	var exists bool
+	if err := r.pool.QueryRow(ctx, query, buyerID, sellerID, entities.OrderStatusReleased).Scan(&exists); err != nil {
+		return false, fmt.Errorf("no se pudo verificar la compra: %w", err)
+	}
+	return exists, nil
+}
+
 func (r *PostgreSQLOrderRepository) ListBySellerID(ctx context.Context, sellerID string) ([]*entities.Order, error) {
 	rows, err := r.pool.Query(ctx, selectOrdersQuery+" WHERE seller_id = $1 ORDER BY created_at DESC", sellerID)
 	if err != nil {

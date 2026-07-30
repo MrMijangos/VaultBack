@@ -15,16 +15,20 @@ var allowedNotificationTypes = map[string]bool{
 }
 
 var allowedNotificationSubtypes = map[string]bool{
-	"entro_servicio":   true,
-	"salio_servicio":   true,
-	"entro_reparacion": true,
-	"salio_reparacion": true,
-	"pedido_recibido":  true,
-	"pedido_enviado":   true,
-	"nueva_compra":     true,
-	"asset_verificado": true,
-	"likes_post":       true,
-	"mensaje_nuevo":    true,
+	"entro_servicio":        true,
+	"salio_servicio":        true,
+	"entro_reparacion":      true,
+	"salio_reparacion":      true,
+	"en_proceso_servicio":   true,
+	"en_proceso_reparacion": true,
+	"solicitud_recibida":    true,
+	"articulo_confirmado":   true,
+	"pedido_recibido":       true,
+	"pedido_enviado":        true,
+	"nueva_compra":          true,
+	"asset_verificado":      true,
+	"likes_post":            true,
+	"mensaje_nuevo":         true,
 }
 
 type CreateNotificationRequest struct {

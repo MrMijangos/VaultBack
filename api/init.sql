@@ -135,6 +135,35 @@ CREATE TABLE IF NOT EXISTS maintenance_logs (
 	CONSTRAINT maintenance_logs_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
 );
 
+-- Solicitud de servicio/reparación iniciada desde el chat: el dueño manda
+-- un activo a un negocio y ambos van avanzando el estado hasta que el
+-- dueño confirma que lo recibió de vuelta -- a diferencia de
+-- maintenance_logs (un historial que el dueño carga a mano, después del
+-- hecho), esto es un flujo en vivo con dos partes. Al llegar a "confirmado"
+-- se crea automáticamente la fila correspondiente en maintenance_logs (ver
+-- ConfirmServiceRequestUseCase), así que el contador de servicios/
+-- restauraciones de cada activo queda alimentado por trabajo real.
+CREATE TABLE IF NOT EXISTS service_requests (
+	id uuid NOT NULL DEFAULT gen_random_uuid(),
+	asset_id uuid NOT NULL,
+	owner_id uuid NOT NULL,
+	business_id uuid NOT NULL,
+	type character varying NOT NULL CHECK (type::text = ANY (ARRAY['servicio', 'reparacion']::text[])),
+	status character varying NOT NULL DEFAULT 'pendiente_aceptacion'
+		CHECK (status::text = ANY (ARRAY['pendiente_aceptacion', 'en_espera', 'en_servicio', 'terminado', 'confirmado']::text[])),
+	created_at timestamp without time zone DEFAULT now(),
+	accepted_at timestamp without time zone,
+	started_at timestamp without time zone,
+	finished_at timestamp without time zone,
+	confirmed_at timestamp without time zone,
+	CONSTRAINT service_requests_pkey PRIMARY KEY (id),
+	CONSTRAINT service_requests_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+	CONSTRAINT service_requests_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+	CONSTRAINT service_requests_business_id_fkey FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_service_requests_owner_id ON service_requests (owner_id);
+CREATE INDEX IF NOT EXISTS idx_service_requests_business_id ON service_requests (business_id);
+
 CREATE TABLE IF NOT EXISTS posts (
 	id uuid NOT NULL DEFAULT gen_random_uuid(),
 	user_id uuid NOT NULL,
@@ -277,7 +306,7 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
 
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_subtype_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_subtype_check
-	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer', 'comentario_nuevo']::text[]));
+	CHECK (subtype::text = ANY (ARRAY['entro_servicio', 'salio_servicio', 'entro_reparacion', 'salio_reparacion', 'en_proceso_servicio', 'en_proceso_reparacion', 'solicitud_recibida', 'articulo_confirmado', 'pedido_recibido', 'pedido_enviado', 'nueva_compra', 'asset_verificado', 'likes_post', 'mensaje_nuevo', 'suscripcion_activa', 'suscripcion_renovada', 'suscripcion_fallida', 'suscripcion_cancelada', 'suscripcion_por_vencer', 'comentario_nuevo']::text[]));
 
 -- Un usuario puede tener varios dispositivos (o reinstalar la app), así que
 -- token es único globalmente en vez de único por (user_id, token): si el
